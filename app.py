@@ -21,6 +21,12 @@ class User(db.Model):
     car_id = db.Column(db.String(20))
     car_capacity = db.Column(db.Float)
 
+class Order(db.Model):
+    __tablename__ = "order"
+    bill_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    car_id = db.Column(db.String(20))
+
+
     def __init__(self, user_name, password, car_id, car_capacity):
         self.user_name = user_name
         self.password = password
@@ -37,8 +43,9 @@ class UserManager:
     def login(self, name, password):
         userCheckCount = db.session.query.filter_by(user_name=name, password=hashlib.md5(password).hexdigest()).count()
         if userCheckCount > 0:
-            token = self.addToken(name)
+
             info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(user_name=name).first()
+            token = self.addToken(info)
             return [1, token, info]
         else:
             return [0]
@@ -48,12 +55,18 @@ class UserManager:
         if userCheckCount <= 0:
             db.session.add(User(name, hashlib.md5(password).hexdigest(), car_id, cap))
             db.commit()
-        return userCheckCount
+            info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(
+                user_name=name).first()
 
-    def addToken(self, name):
+            token = self.addToken(info)
+            user_id = info[0]
+            return [0, user_id, token]
+        return [1]
+
+    def addToken(self, info):
         self.token += 1
         md5Token = hashlib.md5(self.token).hexdigest()
-        self.tokenList[name] = md5Token
+        self.tokenList[md5Token] = info
         return md5Token
 
 
@@ -63,6 +76,8 @@ userManager = UserManager()
 
 @app.route('/')
 def test():
+    id = db.session.query(User.id).filter_by(user_name="1").first()
+    print(id[0])
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
@@ -73,9 +88,11 @@ def test():
 def register():
     usernamePost = request.form['user_name']
     passwordPost = request.form['password']
-    userCheckCount = userManager.register(usernamePost, passwordPost)
+    car_id = request.form['car_id']
+    car_cap = request.form["car_capacity"]
+    userCheckCount = userManager.register(usernamePost, passwordPost, car_id, car_cap)
 
-    if userCheckCount <= 0:
+    if userCheckCount[0] <= 0:
         print(userCheckCount)
         user = User(usernamePost, passwordPost)
         db.session.add(user)
@@ -84,13 +101,14 @@ def register():
             "code": 1,
             "message": "success",
             "data": {
-                "user_id": 1,
-                "user_name": "John Doe",
-                "token": "12345"}
+                "user_id": userCheckCount[1],
+                "user_name": usernamePost,
+                "token": userCheckCount[2],
+                "car_id": car_id,
+                "car_capacity": car_cap,
+                }
         })
     else:
-        print('username:' + usernamePost)
-        print('password:' + passwordPost)
         return jsonify({
             "code": 0,
             "message": "用户名与密码不匹配",
