@@ -35,15 +35,16 @@ class UserManager:
         self.tokenList = {}
 
     def login(self, name, password):
-        userCheckCount = User.query.filter_by(user_name=name, password=hashlib.md5(password).hexdigest()).count()
-        # userCheckCount = db.session.query(User).get({'username': usernamePost}).count()
-        token = 0
+        userCheckCount = db.session.query.filter_by(user_name=name, password=hashlib.md5(password).hexdigest()).count()
         if userCheckCount > 0:
             token = self.addToken(name)
-        return [userCheckCount, token]
+            info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(user_name=name).first()
+            return [1, token, info]
+        else:
+            return [0]
 
     def register(self, name, password, car_id, cap):
-        userCheckCount = User.query.filter_by(name=name, car_id=car_id).count()  # 在数据库内找是否已经注册
+        userCheckCount = User.query.filter_by(user_name=name, car_id=car_id).count()  # 在数据库内找是否已经注册
         if userCheckCount <= 0:
             db.session.add(User(name, hashlib.md5(password).hexdigest(), car_id, cap))
             db.commit()
@@ -62,8 +63,6 @@ userManager = UserManager()
 
 @app.route('/')
 def test():
-    db.session.add(User("1", "1", "1", 1))
-    db.session.commit()
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
@@ -109,11 +108,11 @@ def log():
             "code": 1,
             "message": "success",
             "data": {
-                "user_id": 1,
-                "user_name": "John Doe",
+                "user_id": userCheckCount[2][0],
+                "user_name": userCheckCount[2][1],
                 "token": userCheckCount[1],
-                "car_id": 1,
-                "car_capacity": 1,
+                "car_id": userCheckCount[2][2],
+                "car_capacity": userCheckCount[2][3],
             }
         })
     else:
@@ -157,6 +156,5 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-
 
     app.run(host='0.0.0.0', port=80)
