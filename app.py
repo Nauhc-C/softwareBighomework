@@ -14,7 +14,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user'
 
 db = SQLAlchemy(app)
 
-
+class 充电桩():
+    def __init__(self):
+        self.id=1
+a=充电桩()
 class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
@@ -56,6 +59,12 @@ class OrderManager:
         pass
 
 
+
+
+
+
+
+
 class UserManager:
     def __init__(self):
         self.token = 1
@@ -66,6 +75,7 @@ class UserManager:
         m.update(password.encode(encoding="utf-8"))
         userCheckCount = db.session.query(User).filter_by(user_name=name, password=m.hexdigest()).count()
         if userCheckCount > 0:
+
             info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(
                 user_name=name).first()
             token = self.addToken(info)
