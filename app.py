@@ -19,7 +19,7 @@ class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     user_name = db.Column(db.String(20))
-    password = db.Column(db.String(20))
+    password = db.Column(db.String(200))
     car_id = db.Column(db.String(20))
     car_capacity = db.Column(db.Float)
 
@@ -56,21 +56,16 @@ class OrderManager:
         pass
 
 
-
-
-
-
-
-
 class UserManager:
     def __init__(self):
         self.token = 1
         self.tokenList = {}
 
     def login(self, name, password):
-        userCheckCount = User.query.filter_by(user_name=name, password=hashlib.md5(password).hexdigest()).count()
+        m = hashlib.md5()
+        m.update(password.encode(encoding="utf-8"))
+        userCheckCount = db.session.query(User).filter_by(user_name=name, password=m.hexdigest()).count()
         if userCheckCount > 0:
-
             info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(
                 user_name=name).first()
             token = self.addToken(info)
@@ -79,10 +74,12 @@ class UserManager:
             return [0]
 
     def register(self, name, password, car_id, cap):
-        userCheckCount = User.query.filter_by(user_name=name, car_id=car_id).count()  # 在数据库内找是否已经注册
+        userCheckCount = db.session.query(User).filter_by(user_name=name, car_id=car_id).count()  # 在数据库内找是否已经注册
         if userCheckCount <= 0:
-            db.session.add(User(name, hashlib.md5(password).hexdigest(), car_id, cap))
-            db.commit()
+            m = hashlib.md5()
+            m.update(password.encode(encoding="utf-8"))
+            db.session.add(User(name, m.hexdigest(), car_id, cap))
+            db.session.commit()
             info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(
                 user_name=name).first()
 
@@ -93,16 +90,33 @@ class UserManager:
 
     def addToken(self, info):
         self.token += 1
-        md5Token = hashlib.md5(self.token).hexdigest()
+        m = hashlib.md5()
+        m.update((str(self.token) + info[1] + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
+        md5Token = m.hexdigest()
         self.tokenList[md5Token] = [info]
         return md5Token
 
+    def checkToken(self, token):
+        ret = self.tokenList.get(token)
+        if ret is None:
+            return False
+        return True
+
+    def removeToken(self, token):
+        self.tokenList.pop(token)
+
 
 userManager = UserManager()
-
+orderManager = OrderManager()
 
 @app.route('/')
 def test():
+    m = hashlib.md5()
+    m.update("123".encode(encoding="utf-8"))
+    db.session.add(User("1", m.hexdigest(), "123", 123))
+    db.session.commit()
+
+    print(db.session.query(User).filter_by(user_name="1").all())
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
@@ -138,10 +152,19 @@ def register():
             "code": 0,
             "message": "用户名与密码不匹配",
         })
+
+
 @app.route("/user/getTotalBill", methods=["POST"])
 def getTotalBill():
     car_id = request.form["car_id"]
     bill_data = request.form["bill_data"]
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "useless token."
+        })
+
 
 
 # 此方法处理用户登录
@@ -169,11 +192,8 @@ def log():
         })
 
 
-
-
-
-
 with app.app_context():
+    print(_datetime.datetime.now().isoformat())
     db.drop_all()
     db.create_all()
 
