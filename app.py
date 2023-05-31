@@ -4,6 +4,7 @@ import os
 import hashlib
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+import _datetime
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -13,25 +14,51 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user'
 
 db = SQLAlchemy(app)
 
+
 class User(db.Model):
     __tablename__ = "user"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     user_name = db.Column(db.String(20))
     password = db.Column(db.String(20))
     car_id = db.Column(db.String(20))
     car_capacity = db.Column(db.Float)
-
-class Order(db.Model):
-    __tablename__ = "order"
-    bill_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    car_id = db.Column(db.String(20))
-
 
     def __init__(self, user_name, password, car_id, car_capacity):
         self.user_name = user_name
         self.password = password
         self.car_id = car_id
         self.car_capacity = car_capacity
+
+
+class Order(db.Model):
+    __tablename__ = "order"
+    bill_id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
+    car_id = db.Column(db.String(20))
+    pile_id = db.Column(db.Integer)
+    charge_amount = db.Column(db.Float)
+    charge_duration = db.Column(db.Float)
+    total_charge_fee = db.Column(db.Float)
+    total_service_fee = db.Column(db.Float)
+    total_fee = db.Column(db.Float)
+    pay_state = db.Column(db.Integer, default=0)
+    start_time = db.Column(db.DateTime, nullable=False, default=_datetime.datetime.now())
+    end_time = db.Column(db.DateTime)
+    bill_data = db.Column(db.Date, nullable=False, default=_datetime.date.today())
+
+    def __init__(self, car_id, charge_amount, pile_id):
+        self.car_id = car_id
+        self.charge_amount = charge_amount
+        self.pile_id = pile_id
+
+
+class OrderManager:
+    def __init__(self):
+        pass
+
+
+
+
+
 
 
 
@@ -41,10 +68,11 @@ class UserManager:
         self.tokenList = {}
 
     def login(self, name, password):
-        userCheckCount = db.session.query.filter_by(user_name=name, password=hashlib.md5(password).hexdigest()).count()
+        userCheckCount = User.query.filter_by(user_name=name, password=hashlib.md5(password).hexdigest()).count()
         if userCheckCount > 0:
 
-            info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(user_name=name).first()
+            info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(
+                user_name=name).first()
             token = self.addToken(info)
             return [1, token, info]
         else:
@@ -66,18 +94,15 @@ class UserManager:
     def addToken(self, info):
         self.token += 1
         md5Token = hashlib.md5(self.token).hexdigest()
-        self.tokenList[md5Token] = info
+        self.tokenList[md5Token] = [info]
         return md5Token
 
 
 userManager = UserManager()
 
 
-
 @app.route('/')
 def test():
-    id = db.session.query(User.id).filter_by(user_name="1").first()
-    print(id[0])
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
@@ -106,13 +131,17 @@ def register():
                 "token": userCheckCount[2],
                 "car_id": car_id,
                 "car_capacity": car_cap,
-                }
+            }
         })
     else:
         return jsonify({
             "code": 0,
             "message": "用户名与密码不匹配",
         })
+@app.route("/user/getTotalBill", methods=["POST"])
+def getTotalBill():
+    car_id = request.form["car_id"]
+    bill_data = request.form["bill_data"]
 
 
 # 此方法处理用户登录
@@ -144,35 +173,9 @@ def log():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 with app.app_context():
+    db.drop_all()
     db.create_all()
 
 if __name__ == '__main__':
-
     app.run(host='0.0.0.0', port=80)
