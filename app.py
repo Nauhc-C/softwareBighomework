@@ -35,33 +35,56 @@ class User(db.Model):
 
 class Order(db.Model):
     __tablename__ = "order"
-    bill_id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
+    bill_id = db.Column(db.String(50), primary_key=True, nullable=False)
     car_id = db.Column(db.String(20))
     pile_id = db.Column(db.Integer)
     charge_amount = db.Column(db.Float)
     charge_duration = db.Column(db.Float)
-    total_charge_fee = db.Column(db.Float)
-    total_service_fee = db.Column(db.Float)
-    total_fee = db.Column(db.Float)
+    total_charge_fee = db.Column(db.Float, default=0)
+    total_service_fee = db.Column(db.Float, default=0)
+    total_fee = db.Column(db.Float, default=0)
     pay_state = db.Column(db.Integer, default=0)
     start_time = db.Column(db.DateTime, nullable=False, default=_datetime.datetime.now())
-    end_time = db.Column(db.DateTime)
-    bill_data = db.Column(db.Date, nullable=False, default=_datetime.date.today())
+    end_time = db.Column(db.DateTime, default=None)
+    bill_date = db.Column(db.Date, nullable=False, default=_datetime.date.today())
 
-    def __init__(self, car_id, charge_amount, pile_id):
+    def __init__(self, car_id, charge_amount, pile_id, charge_duration):
         self.car_id = car_id
         self.charge_amount = charge_amount
         self.pile_id = pile_id
-
+        m = hashlib.md5()
+        m.update((car_id + str(pile_id) + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
+        self.bill_id = m.hexdigest()
+        self.charge_duration = charge_duration
 
 class OrderManager:
     def __init__(self):
         pass
 
+    def findBillAll(self, car_id, date):
+        num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
+        if num == 0:
+            return [0]
+        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time, Order.end_time, Order.total_fee, Order.pay_state).filter_by(car_id=car_id, bill_date=date).all()
+        list = []
+        for i in info:
+            dic = {}
+            dic["car_id"] = i[0]
+            dic["bill_date"] = i[1]
+            dic["bill_id"] = i[2]
+            dic["pile_id"] = i[3]
+            dic["start_time"] = i[4]
+            dic["end_time"] = i[5]
+            dic["total_fee"] = i[6]
+            dic["pay_state"] = i[7]
+            list.append(dic)
+        return [1, list]
 
-
-
-
+    def findBillOnly(self, bill_id):
+        i = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time, Order.end_time, Order.total_fee, Order.pay_state, Order.charge_amount, Order.charge_duration, Order.total_charge_fee, Order.total_service_fee).filter_by(bill_id=bill_id).first()
+        if len(i) == 0:
+            return [0]
+        return [1, i]
 
 
 
@@ -123,9 +146,10 @@ orderManager = OrderManager()
 def test():
     m = hashlib.md5()
     m.update("123".encode(encoding="utf-8"))
-    db.session.add(User("1", m.hexdigest(), "123", 123))
-    db.session.commit()
 
+    db.session.add(Order("ADX100", 23, 1, 23.2))
+    db.session.commit()
+    print(orderManager.findBillAll("ADX100", _datetime.date.today()))
     print(db.session.query(User).filter_by(user_name="1").all())
     pass
     # 此处可以展示网页
@@ -174,8 +198,55 @@ def getTotalBill():
             "code": 0,
             "message": "useless token."
         })
+    info = orderManager.findBillAll(car_id, bill_data)
+    if info[0] == 0:
+        return jsonify({
+            "code": 0,
+            "message": "there is no bill.",
+        })
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": {
+            "bill_list": info[1]
+        }
+    })
 
-
+@app.route("/user/getDetailBill", methods=["POST"])
+# 乌鱼子 为什么要有这个函数，合并到上一个不行吗
+def getOnlyBill():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "useless token."
+        })
+    bill_id = request.form["bill_id"]
+    i = orderManager.findBillOnly(bill_id)
+    if i[0] == 0:
+        return jsonify({
+            "code": 0,
+            "message": "useless billid."
+        })
+    i = i[1]
+    return jsonify({
+        "code": 0,
+        "message": "useless billid.",
+        "data": {
+            "car_id": i[0],
+            "bill_date": i[1],
+            "bill_id": i[2],
+            "pile_id": i[3],
+            "start_time": i[4],
+            "end_time": i[5],
+            "total_fee": i[6],
+            "pay_state": i[7],
+            "charge_amount": i[8],
+            "charge_duration": i[9],
+            "total_charge_fee": i[10],
+            "total_service_fee": i[11],
+        }
+    })
 
 # 此方法处理用户登录
 @app.route('/user/login', methods=['POST'])
@@ -201,6 +272,19 @@ def log():
             "message": "failed",
         })
 
+@app.route("/user/logout", methods=["POST"])
+def logout():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    userManager.removeToken(token)
+    return jsonify({
+        "code": 1,
+        "message": "注销成功."
+    })
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
