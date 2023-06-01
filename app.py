@@ -154,7 +154,15 @@ class UserManager:
             return False
         User.query.filter_by(car_id=car_id).update({"car_capacity": car_cap})
         db.session.commit()
+        userInfo[3] = car_cap
         return True
+
+    def modifyMode(self, token, mode):
+        pass
+
+
+    def modifyAmount(self, token, amount):
+        pass
 
 userManager = UserManager()
 orderManager = OrderManager()
