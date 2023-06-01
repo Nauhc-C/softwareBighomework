@@ -14,10 +14,15 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user'
 
 db = SQLAlchemy(app)
 
+
 class 充电桩():
     def __init__(self):
-        self.id=1
-a=充电桩()
+        self.id = 1
+
+
+a = 充电桩()
+
+
 class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
@@ -57,6 +62,7 @@ class Order(db.Model):
         self.bill_id = m.hexdigest()
         self.charge_duration = charge_duration
 
+
 class OrderManager:
     def __init__(self):
         pass
@@ -65,7 +71,9 @@ class OrderManager:
         num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
         if num == 0:
             return [0]
-        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time, Order.end_time, Order.total_fee, Order.pay_state).filter_by(car_id=car_id, bill_date=date).all()
+        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
+                                Order.end_time, Order.total_fee, Order.pay_state).filter_by(car_id=car_id,
+                                                                                            bill_date=date).all()
         list = []
         for i in info:
             dic = {}
@@ -81,7 +89,10 @@ class OrderManager:
         return [1, list]
 
     def findBillOnly(self, bill_id):
-        i = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time, Order.end_time, Order.total_fee, Order.pay_state, Order.charge_amount, Order.charge_duration, Order.total_charge_fee, Order.total_service_fee).filter_by(bill_id=bill_id).first()
+        i = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
+                             Order.end_time, Order.total_fee, Order.pay_state, Order.charge_amount,
+                             Order.charge_duration, Order.total_charge_fee, Order.total_service_fee).filter_by(
+            bill_id=bill_id).first()
         if len(i) == 0:
             return [0]
         return [1, i]
@@ -93,6 +104,7 @@ class OrderManager:
             db.session.commit()
             return True
         return False
+
 
 class UserManager:
     def __init__(self):
@@ -132,7 +144,7 @@ class UserManager:
         self.token += 1
         m = hashlib.md5()
         m.update((str(self.token) + info[1] + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
-        md5Token = m.hexdigest()    #用户id 用户名 用户车id 车总电量 充电量 充电模式 是否在充电
+        md5Token = m.hexdigest()  # 用户id 用户名 用户车id 车总电量 充电量 充电模式 是否在充电
         self.tokenList[md5Token] = [info[0], info[1], info[2], info[3], 0, 0, 0]
         return md5Token
 
@@ -160,17 +172,16 @@ class UserManager:
     def modifyMode(self, token, mode):
         pass
 
-
     def modifyAmount(self, token, amount):
         pass
+
 
 userManager = UserManager()
 orderManager = OrderManager()
 
+
 @app.route('/')
 def test():
-    m = hashlib.md5()
-    m.update("123".encode(encoding="utf-8"))
 
     db.session.add(Order("ADX100", 23, 1, 23.2))
     db.session.commit()
@@ -241,6 +252,7 @@ def getTotalBill():
         }
     })
 
+
 @app.route("/user/getDetailBill", methods=["POST"])
 # 乌鱼子 为什么要有这个函数，合并到上一个不行吗
 def getOnlyBill():
@@ -277,6 +289,7 @@ def getOnlyBill():
         }
     })
 
+
 # 此方法处理用户登录
 @app.route('/user/login', methods=['POST'])
 def log():
@@ -301,6 +314,7 @@ def log():
             "message": "failed",
         })
 
+
 @app.route("/user/logout", methods=["POST"])
 def logout():
     token = request.headers.get("Authorization")
@@ -314,6 +328,7 @@ def logout():
         "code": 1,
         "message": "注销成功."
     })
+
 
 @app.route("/user/getPayBill", methods=["POST"])
 def pay():
@@ -334,6 +349,7 @@ def pay():
             "code": 0,
             "message": "重复支付."
         })
+
 
 @app.route("/user/changeCapacity", methods=["POST"])
 def changeCapacity():
@@ -356,11 +372,45 @@ def changeCapacity():
             "message": "正在充电或者不存在该车辆."
         })
 
+@app.route("/admin/login", methods=["POST"])
+def adminLog():
+    password = request.form["password"]
+    info = userManager.login("admin", password)
+    if info[0] > 0:
+        return jsonify({
+            "code": 1,
+            "message": "admin login.",
+            "data": {
+                "token": info[1]
+        }
+        })
+    return jsonify({
+        "code": 0,
+        "message": "密码错误."
+    })
+
+@app.route("/admin/logout", methods=["POST"])
+def adminLogout():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    userManager.removeToken(token)
+    return jsonify({
+        "code": 1,
+        "message": "注销成功."
+    })
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
     db.drop_all()
     db.create_all()
+    m = hashlib.md5()
+    m.update("zxc123456".encode(encoding="utf-8"))
+    db.session.add(User("admin", m.hexdigest(), None, None))
+    db.session.commit()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)
