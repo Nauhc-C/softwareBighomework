@@ -14,15 +14,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user'
 
 db = SQLAlchemy(app)
 
-
-class 充电桩():
-    def __init__(self):
-        self.id = 1
-
-
-a = 充电桩()
-
-
 class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
