@@ -86,7 +86,13 @@ class OrderManager:
             return [0]
         return [1, i]
 
-
+    def payBill(self, bill_id):
+        state = db.session.query(Order.pay_state).filter_by(bill_id=bill_id).first()
+        if state[0] == 0:
+            Order.query.filter_by(bill_id=bill_id).update({"pay_state": 1})
+            db.session.commit()
+            return True
+        return False
 
 class UserManager:
     def __init__(self):
@@ -107,8 +113,9 @@ class UserManager:
             return [0]
 
     def register(self, name, password, car_id, cap):
-        userCheckCount = db.session.query(User).filter_by(user_name=name, car_id=car_id).count()  # 在数据库内找是否已经注册
-        if userCheckCount <= 0:
+        userCheckCount1 = db.session.query(User).filter_by(user_name=name).count()  # 在数据库内找是否已经注册
+        userCheckCount2 = db.session.query(User).filter_by(car_id=car_id).count()
+        if userCheckCount1 == 0 and userCheckCount2 == 0:
             m = hashlib.md5()
             m.update(password.encode(encoding="utf-8"))
             db.session.add(User(name, m.hexdigest(), car_id, cap))
@@ -125,8 +132,8 @@ class UserManager:
         self.token += 1
         m = hashlib.md5()
         m.update((str(self.token) + info[1] + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
-        md5Token = m.hexdigest()
-        self.tokenList[md5Token] = [info]
+        md5Token = m.hexdigest()    #用户id 用户名 用户车id 车总电量 充电量 充电模式 是否在充电
+        self.tokenList[md5Token] = [info[0], info[1], info[2], info[3], 0, 0, 0]
         return md5Token
 
     def checkToken(self, token):
@@ -138,6 +145,16 @@ class UserManager:
     def removeToken(self, token):
         self.tokenList.pop(token)
 
+    def modifyCar(self, token, car_id, car_cap):
+        userInfo = self.tokenList.get(token)
+        if userInfo[6] == 1:
+            return False
+        count = db.session.query(User).filter_by(car_id=car_id).count()  # 在数据库内找是否已经注册
+        if count == 0:
+            return False
+        User.query.filter_by(car_id=car_id).update({"car_capacity": car_cap})
+        db.session.commit()
+        return True
 
 userManager = UserManager()
 orderManager = OrderManager()
@@ -151,6 +168,10 @@ def test():
     db.session.commit()
     print(orderManager.findBillAll("ADX100", _datetime.date.today()))
     print(db.session.query(User).filter_by(user_name="1").all())
+    print(db.session.query(Order.pay_state).filter_by(car_id="ADX100").first())
+    Order.query.filter_by(car_id="ADX100").update({"pay_state": 1})
+    db.session.commit()
+    print(db.session.query(Order.pay_state).filter_by(car_id="ADX100").first())
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
@@ -285,6 +306,48 @@ def logout():
         "code": 1,
         "message": "注销成功."
     })
+
+@app.route("/user/getPayBill", methods=["POST"])
+def pay():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    bill_id = request.form["bill_id"]
+    if orderManager.payBill(bill_id):
+        return jsonify({
+            "code": 1,
+            "message": "支付成功."
+        })
+    else:
+        return jsonify({
+            "code": 0,
+            "message": "重复支付."
+        })
+
+@app.route("/user/changeCapacity", methods=["POST"])
+def changeCapacity():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    car_id = request.form["car_id"]
+    car_cap = request.form["car_capacity"]
+    if userManager.modifyCar(token, car_id, car_cap):
+        return jsonify({
+            "code": 1,
+            "message": "success."
+        })
+    else:
+        return jsonify({
+            "code": 0,
+            "message": "正在充电或者不存在该车辆."
+        })
+
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
