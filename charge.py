@@ -113,10 +113,27 @@ class pile_manager(threading.Thread):
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
                 _pile.waiting_list[0].order_state=order_s.on_charge
                 _pile.working_state=charging_pile_state.in_use
-
         return flag
     #取消/结束充电
-    def end_charge(self):
+    def end_charge(self,car_id):
+        flag = False
+        #判断是在充电区还是在等候区
+        for i in self.waiting_area:
+            if i.car_id == car_id:
+                flag=True
+                #在充电区
+                if i.request_mode ==charge_mode.T:
+                    self.T_list.remove(i)
+                else:
+                    self.F_list.remove(i)
+                self.waiting_area.remove(i)   #在所有list中删除他即可
+
+        for _pile in self.pile_pool:
+            if (_pile.waiting_list != [] and _pile.check_car_id(car_id)!=2):
+                flag = True
+                _pile.waiting_list[0].order_state = order_s.on_charge
+
+
         pass
 
 

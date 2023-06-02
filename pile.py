@@ -80,6 +80,13 @@ class pile():
         else:
             return False
 
+    def check_car_id(self,car_id):
+        count=0
+        for i in self.waiting_list:
+            if i.car_id==car_id:
+                break
+            count+=1
+        return count
 
 
 
