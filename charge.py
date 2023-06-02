@@ -88,13 +88,17 @@ class pile_manager(threading.Thread):
             o = order(car_id, request_amount, charge_mode.F)
         try:
             self.waiting_area.append(o)
+            len=-1
             if _charge_mode == "T":
                 self.T_list.append(o)
                 o.init_num(len(self.T_list))
+                len=len(self.T_list)
             else:
                 self.F_list.append(o)
-                o.init_num(len(self.T_list))
-            return "success"
+                o.init_num(len(self.F_list))
+                len=len(self.F_list)
+
+            return f"{_charge_mode}{len}"
         except Exception as e:
             print(e)
             return "failure"
