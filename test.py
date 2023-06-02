@@ -27,5 +27,3 @@ def test_create(a):
     print(a.waiting_area)
 
     print(a.check_pile_report(1))
-
-
