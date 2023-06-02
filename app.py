@@ -83,7 +83,6 @@ class OrderManager:
     def creatOrder(self, car_id, charge_amount, pile_id):
         db.session.add(Order(car_id, charge_amount, pile_id))
         db.session.commit()
-        print("1234")
 
 
     def findBillOnly(self, bill_id):
@@ -462,6 +461,26 @@ def powerOn():
             "message": "用户未登录."
         })
     id = request.form["pile_id"]
+    pileManager.open_pile(id)
+    return jsonify({
+        "code": 1,
+        "message": "success."
+    })
+
+@app.route("/admin/powerOff", methods=["POST"])
+def powerOff():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    id = request.form["pile_id"]
+    pileManager.close_pile(id)
+    return jsonify({
+        "code": 1,
+        "message": "success."
+    })
 
 
 with app.app_context():
