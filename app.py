@@ -5,6 +5,7 @@ import hashlib
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 import _datetime
+from charge import pile_manager
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -13,6 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user'
 
 db = SQLAlchemy(app)
+
 
 class User(db.Model):
     __tablename__ = "user"
@@ -145,6 +147,22 @@ class UserManager:
             return False
         return True
 
+    def requestC(self, token, amount, mode):
+        info = self.tokenList.get(token)
+        ret = pileManager.submit_a_charging_request(info[2], amount, mode)
+        if ret[0] == 0:
+            return [0]
+        info[4] = amount
+        info[5] = mode
+        info[6] = 1
+        return ret
+
+    def checkIfUpMax(self, token, amount):
+        info = self.tokenList.get(token)
+        if amount > info[3]:
+            return False
+        return True
+
     def removeToken(self, token):
         self.tokenList.pop(token)
 
@@ -158,6 +176,7 @@ class UserManager:
         User.query.filter_by(car_id=car_id).update({"car_capacity": car_cap})
         db.session.commit()
         userInfo[3] = car_cap
+
         return True
 
     def modifyMode(self, token, mode):
@@ -169,11 +188,11 @@ class UserManager:
 
 userManager = UserManager()
 orderManager = OrderManager()
+pileManager = pile_manager()
 
 
 @app.route('/')
 def test():
-
     db.session.add(Order("ADX100", 23, 1, 23.2))
     db.session.commit()
     print(orderManager.findBillAll("ADX100", _datetime.date.today()))
@@ -362,7 +381,39 @@ def changeCapacity():
             "code": 0,
             "message": "正在充电或者不存在该车辆."
         })
-@app.route("")
+
+
+@app.route("/user/chargingRequest")
+def requestCharge():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    amount = request.form["request_amount"]
+    mode = request.form["request_mode"]
+    if not userManager.checkIfUpMax(token, amount):
+        return jsonify({
+            "code": 0,
+            "message": "请求电量超过车辆总电量."
+        })
+    info = userManager.requestC(token, amount, mode)
+    if info[0] == 0:
+        return jsonify({
+            "code": 0,
+            "message": "等待区已满."
+        })
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": {
+            "car_positon": info[1],
+            "car_state": "等待区",
+            "queue": str(info[1]),
+            "request_time": _datetime.datetime.now()
+        }
+    })
 
 
 @app.route("/admin/login", methods=["POST"])
@@ -375,12 +426,13 @@ def adminLog():
             "message": "admin login.",
             "data": {
                 "token": info[1]
-        }
+            }
         })
     return jsonify({
         "code": 0,
         "message": "密码错误."
     })
+
 
 @app.route("/admin/logout", methods=["POST"])
 def adminLogout():
@@ -396,6 +448,7 @@ def adminLogout():
         "message": "注销成功."
     })
 
+
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
     db.drop_all()
@@ -404,6 +457,7 @@ with app.app_context():
     m.update("zxc123456".encode(encoding="utf-8"))
     db.session.add(User("admin", m.hexdigest(), None, None))
     db.session.commit()
+    pileManager.start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)

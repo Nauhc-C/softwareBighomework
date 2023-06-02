@@ -98,10 +98,10 @@ class pile_manager(threading.Thread):
                 o.init_num(len(self.F_list))
                 len=len(self.F_list)
 
-            return f"{_charge_mode}{len}"
+            return [1, _charge_mode, len]
         except Exception as e:
             print(e)
-            return "failure"
+            return [0]
     #修改充电模式
     def modify_the_charging_mode(self):
         pass
