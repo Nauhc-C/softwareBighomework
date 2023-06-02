@@ -10,11 +10,11 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 ### 注意所有变量都为下划线命名, 所有api都是驼峰命名
-engine = create_engine('sqlite:///instance/user', echo=True)
+engine = create_engine('sqlite:///instance/user')
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 session = Session()
-class Order(db.Model):
+class Order(Base):
     __tablename__ = "order"
     bill_id = Column(String(50), primary_key=True, nullable=False)
     car_id = Column(String(20))
@@ -22,7 +22,7 @@ class Order(db.Model):
     charge_amount = Column(Float)
     charge_duration = Column(Float)
     total_charge_fee = Column(Float, default=0)
-    total_service_fee = db.Column(Float, default=0)
+    total_service_fee = Column(Float, default=0)
     total_fee = Column(Float, default=0)
     pay_state = Column(Integer, default=0)
     start_time = Column(DateTime, nullable=False, default=_datetime.datetime.now())
