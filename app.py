@@ -46,14 +46,13 @@ class Order(db.Model):
     end_time = db.Column(db.DateTime, default=None)
     bill_date = db.Column(db.Date, nullable=False, default=_datetime.date.today())
 
-    def __init__(self, car_id, charge_amount, pile_id, charge_duration):
+    def __init__(self, car_id, charge_amount, pile_id):
         self.car_id = car_id
         self.charge_amount = charge_amount
         self.pile_id = pile_id
         m = hashlib.md5()
         m.update((car_id + str(pile_id) + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
         self.bill_id = m.hexdigest()
-        self.charge_duration = charge_duration
 
 
 class OrderManager:
@@ -80,6 +79,12 @@ class OrderManager:
             dic["pay_state"] = i[7]
             list.append(dic)
         return [1, list]
+
+    def creatOrder(self, car_id, charge_amount, pile_id):
+        db.session.add(Order(car_id, charge_amount, pile_id))
+        db.session.commit()
+        print("1234")
+
 
     def findBillOnly(self, bill_id):
         i = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
@@ -193,7 +198,7 @@ pileManager = pile_manager()
 
 @app.route('/')
 def test():
-    db.session.add(Order("ADX100", 23, 1, 23.2))
+    db.session.add(Order("ADX100", 23, 1))
     db.session.commit()
     print(orderManager.findBillAll("ADX100", _datetime.date.today()))
     print(db.session.query(User).filter_by(user_name="1").all())
@@ -217,7 +222,7 @@ def register():
 
     if userCheckCount[0] <= 0:
         print(userCheckCount)
-        user = User(usernamePost, passwordPost)
+        user = User(usernamePost, passwordPost, car_id, car_cap)
         db.session.add(user)
         db.session.commit()
         return jsonify({
