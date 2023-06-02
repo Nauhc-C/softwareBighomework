@@ -453,6 +453,16 @@ def adminLogout():
         "message": "注销成功."
     })
 
+@app.route("/admin/powerOn", methods=["POST"])
+def powerOn():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    id = request.form["pile_id"]
+
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
