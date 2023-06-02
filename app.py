@@ -362,6 +362,8 @@ def changeCapacity():
             "code": 0,
             "message": "正在充电或者不存在该车辆."
         })
+@app.route("")
+
 
 @app.route("/admin/login", methods=["POST"])
 def adminLog():
