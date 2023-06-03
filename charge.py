@@ -180,6 +180,9 @@ class pile_manager(threading.Thread):
     def if_car_in_charging(self, car_id):
         pass
 
+    def car_in_wait(car_id):
+        pass
+
     #返回[pile_id, charge_duration, 充电费， 服务费， 总费用]
     def look_charge_state(self, car_id):
         pass

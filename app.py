@@ -6,6 +6,7 @@ from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 import _datetime
 from charge import pile_manager
+from flask_cors import CORS
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -117,6 +118,7 @@ class UserManager:
             info = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).filter_by(
                 user_name=name).first()
             token = self.addToken(info)
+            print(self.tokenList)
             return [1, token, info]
         else:
             return [0]
@@ -124,6 +126,7 @@ class UserManager:
     def register(self, name, password, car_id, cap):
         userCheckCount1 = db.session.query(User).filter_by(user_name=name).count()  # 在数据库内找是否已经注册
         userCheckCount2 = db.session.query(User).filter_by(car_id=car_id).count()
+
         if userCheckCount1 == 0 and userCheckCount2 == 0:
             m = hashlib.md5()
             m.update(password.encode(encoding="utf-8"))
@@ -134,6 +137,7 @@ class UserManager:
 
             token = self.addToken(info)
             user_id = info[0]
+            print(self.tokenList)
             return [0, user_id, token]
         return [1]
 
@@ -146,7 +150,9 @@ class UserManager:
         return md5Token
 
     def checkToken(self, token):
+        print("token=", token)
         ret = self.tokenList.get(token)
+        print(ret)
         if ret is None:
             return False
         return True
@@ -224,6 +230,9 @@ orderManager = OrderManager()
 
 @app.route('/')
 def test():
+    userManager.register("123", "123", "ad111", 1000)
+    token = userManager.login("123", "123")[1]
+    print(userManager.checkToken(token))
     db.session.add(Order("ADX100", 23, 1))
     db.session.commit()
     print(orderManager.findBillAll("ADX100", _datetime.date.today()))
@@ -247,10 +256,6 @@ def register():
     userCheckCount = userManager.register(usernamePost, passwordPost, car_id, car_cap)
 
     if userCheckCount[0] <= 0:
-        print(userCheckCount)
-        user = User(usernamePost, passwordPost, car_id, car_cap)
-        db.session.add(user)
-        db.session.commit()
         return jsonify({
             "code": 1,
             "message": "success",
@@ -272,7 +277,7 @@ def register():
 @app.route("/user/getTotalBill", methods=["POST"])
 def getTotalBill():
     car_id = request.form["car_id"]
-    bill_data = request.form["bill_data"]
+    bill_data = request.form["bill_date"]
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -405,7 +410,10 @@ def changeCapacity():
     if userManager.modifyCar(token, car_id, car_cap):
         return jsonify({
             "code": 1,
-            "message": "success."
+            "message": "success.",
+            "data": {
+                "car_capacity": car_cap
+            }
         })
     else:
         return jsonify({
@@ -449,6 +457,8 @@ def requestCharge():
 @app.route("/user/changeChargingAmount", methods=['POST'])
 def changeAmount():
     token = request.headers.get("Authorization")
+    print(token)
+    print(userManager.tokenList)
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
@@ -624,7 +634,6 @@ def setPrice():
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
-    db.drop_all()
     db.create_all()
     m = hashlib.md5()
     m.update("zxc123456".encode(encoding="utf-8"))
@@ -633,4 +642,6 @@ with app.app_context():
     pileManager.start()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)
+    cors = CORS(app)
+
+    app.run(host='0.0.0.0', port=8888)
