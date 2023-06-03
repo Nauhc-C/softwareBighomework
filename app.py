@@ -142,7 +142,7 @@ class UserManager:
         m = hashlib.md5()
         m.update((str(self.token) + info[1] + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
         md5Token = m.hexdigest()  # 用户id 用户名 用户车id 车总电量 充电量 充电模式 是否在充电
-        self.tokenList[md5Token] = [info[0], info[1], info[2], info[3], 0, 0, 0]
+        self.tokenList[md5Token] = [info[0], info[1], info[2], info[3], 0, 0]
         return md5Token
 
     def checkToken(self, token):
@@ -158,7 +158,6 @@ class UserManager:
             return [0]
         info[4] = amount
         info[5] = mode
-        info[6] = 1
         return ret
 
     def checkIfUpMax(self, token, amount):
@@ -172,7 +171,7 @@ class UserManager:
 
     def modifyCar(self, token, car_id, car_cap):
         userInfo = self.tokenList.get(token)
-        if userInfo[6] == 1:
+        if pileManager.if_car_in_charging(car_id):
             return False
         count = db.session.query(User).filter_by(car_id=car_id).count()  # 在数据库内找是否已经注册
         if count == 0:
@@ -183,16 +182,44 @@ class UserManager:
 
         return True
 
-    def modifyMode(self, token, mode):
-        pass
+    def modifyMode(self, token, car_id, mode):
+        userInfo = self.tokenList.get(token)
+        userInfo[5] = mode
+        return pileManager.modify_the_charging_mode(car_id, mode)
 
-    def modifyAmount(self, token, amount):
-        pass
+    def modifyAmount(self, token, car_id, amount):
+        userInfo = self.tokenList.get(token)
+        userInfo[4] = amount
+        return pileManager.modify_the_amount_of_charge(car_id, amount)
+
+    def lookState(self, car_id):
+        if not pileManager.if_car_in_charging(car_id):
+            return [0]
+        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.start_time, Order.charge_amount).filter_by(bill_id=findBillId(car_id)).first()
+        info2 = pileManager.look_charge_state(car_id)
+        data = {
+            "car_id": car_id,
+            "bill_date": info[1],
+            "bill_id": findBillId(car_id),
+            "pile_id": info2[0],
+            "charge_amount": info[4],
+            "charge_duration": info2[1],
+            "start_time": info[3],
+            "end_time": _datetime.datetime.now(),
+            "total_charge_fee": info2[2],
+            "total_service_fee": info2[3],
+            "total_fee": info2[4]
+
+        }
 
 
+
+
+        return [1, data]
+pileManager = pile_manager()
 userManager = UserManager()
 orderManager = OrderManager()
-pileManager = pile_manager()
+
 
 
 @app.route('/')
@@ -387,7 +414,7 @@ def changeCapacity():
         })
 
 
-@app.route("/user/chargingRequest")
+@app.route("/user/chargingRequest", methods=['POST'])
 def requestCharge():
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
@@ -419,6 +446,82 @@ def requestCharge():
         }
     })
 
+@app.route("/user/changeChargingAmount", methods=['POST'])
+def changeAmount():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    amount = request.form["request_amount"]
+    car_id = request.form["car_id"]
+    if userManager.modifyAmount(car_id, amount):
+        return jsonify({
+            "code": 1,
+            "message": "success."
+        })
+    return jsonify({
+        "code": 0,
+        "message": "failed."
+    })
+
+@app.route("/user/changeChargingMode", methods=['POST'])
+def changeMode():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    mode = request.form["request_mode"]
+    car_id = request.form["car_id"]
+    if userManager.modifyMode(car_id, mode):
+        return jsonify({
+            "code": 1,
+            "message": "success."
+        })
+    return jsonify({
+        "code": 0,
+        "message": "failed."
+    })
+
+
+@app.route("/user/getChargingState", methods=["POST"])
+def getState():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    car_id = request.form["car_id"]
+    info = userManager.lookState(car_id)
+    if info[0] == 0:
+        return jsonify({
+            "code": 0,
+            "message": "充电已结束."
+        })
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": info[1],
+    })
+
+@app.route("/user/queryCarState", methods=["POST"])
+def lookQuery():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    car_id = request.form["car_id"]
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": pileManager.look_query(car_id)
+    })
 
 @app.route("/admin/login", methods=["POST"])
 def adminLog():
@@ -482,6 +585,42 @@ def powerOff():
         "message": "success."
     })
 
+@app.route("/admin/queryPileAmount", methods=["POST"])
+def lookPileAmount():
+    token = request.headers.get("Authorization")
+    amount = pileManager.retPipeAmount()
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": {
+            "amount": amount[0],
+            "fast_pile_id": amount[2],
+            "slow_pile_id": amount[1]
+        }
+    })
+
+@app.route("/admin/setPrice", methods=["POST"])
+def setPrice():
+    token = request.headers.get("Authorization")
+    amount = pileManager.retPipeAmount()
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    low = request.form["low_price"]
+    mid = request.form["mid_price"]
+    high = request.form["high_price"]
+    pileManager.setPrice(low, mid, high)
+    return jsonify({
+        "code": 1,
+        "message": "success."
+    })
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())

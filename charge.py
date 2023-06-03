@@ -45,15 +45,19 @@ class Order(Base):
         car_table[car_id] = self.bill_id
 
 car_table = {}
+
+# 给SLC用的
 def creatOrder(car_id, charge_amount, pile_id):
     session.add(Order(car_id, charge_amount, pile_id))
     session.commit()
 
-
+# 需要提供充电时长，服务费，充电费，总费用
 def finishOrder(car_id, service_fee, total_fee, charge_fee, charge_duration):
     session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": _datetime.datetime.now()})
     session.commit()
 
+def findBillId(car_id):
+    return car_table[car_id]
 
     '''
 全局变量
@@ -78,6 +82,14 @@ class LimitedList(list):
 class pile_manager(threading.Thread):
     def __init__(self, pile_num=5):
         super().__init__()
+        self.pile_num = pile_num
+        # 把这两个填上， 数组里面为充电桩编号 int
+        self.normal_pile = []
+        self.fast_pile = []
+        # 计费的价钱 谷时 平时 峰时
+        self.low_price = 0
+        self.mid_price = 0
+        self.high_price = 0
         self.pile_pool = []
         for i in range(pile_num):
             if i < 2:
@@ -156,12 +168,41 @@ class pile_manager(threading.Thread):
             return [0]
 
     # 修改充电模式
-    def modify_the_charging_mode(self):
+    # 返回True or False
+    def modify_the_charging_mode(self, car_id, mode):
         pass
 
     # 修改充电量
-    def modify_the_amount_of_charge(self):
+    def modify_the_amount_of_charge(self, car_id, amount):
         pass
+
+    # return True or False
+    def if_car_in_charging(self, car_id):
+        pass
+
+    #返回[pile_id, charge_duration, 充电费， 服务费， 总费用]
+    def look_charge_state(self, car_id):
+        pass
+    def retPipeAmount(self):
+        return [self.pile_num, self.normal_pile, self.fast_pile]
+
+    def look_query(self, car_id):
+        return {
+            "car_position": None,
+            "car_state": None,
+            "queue_num": None,
+            "request_time": _datetime.datetime.now(),
+            "pile_id": None,
+            "request_mode": None,
+            "request_amount": None
+
+        }
+
+    def setPrice(self, low, mid, high):
+        self.low_price = low
+        self.mid_price = mid
+        self.high_price = high
+
 
     # 开始充电
     def start_charge(self, car_id):
