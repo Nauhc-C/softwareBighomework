@@ -5,7 +5,7 @@ import hashlib
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 import _datetime
-from charge import pile_manager
+from charge import pile_manager, findBillId
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -101,6 +101,13 @@ class OrderManager:
             Order.query.filter_by(bill_id=bill_id).update({"pay_state": 1})
             db.session.commit()
             return True
+        return False
+
+    def if_no_pay(self, car_id):
+        state = db.session.query(Order.pay_state).filter_by(car_id=car_id).all()
+        for i in state:
+            if i[0] == 0:
+                return True
         return False
 
 
@@ -425,24 +432,31 @@ def changeCapacity():
 @app.route("/user/chargingRequest", methods=['POST'])
 def requestCharge():
     token = request.headers.get("Authorization")
+
     if not userManager.checkToken(token):
+
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
+    print("okokoko3")
     amount = request.form["request_amount"]
     mode = request.form["request_mode"]
+    print("okokoko4")
     if not userManager.checkIfUpMax(token, amount):
         return jsonify({
             "code": 0,
             "message": "请求电量超过车辆总电量."
         })
+    print("okokoko")
     info = userManager.requestC(token, amount, mode)
+    print("okokoko2")
     if info[0] == 0:
         return jsonify({
             "code": 0,
             "message": "等待区已满."
         })
+
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -527,6 +541,23 @@ def lookQuery():
             "message": "用户未登录."
         })
     car_id = request.form["car_id"]
+    if orderManager.if_no_pay(car_id):
+        return jsonify({
+            "code": 1,
+            "message": "充电结束",
+            "data": {
+                "car_position": "充电结束"
+        }
+        })
+
+    if (not pileManager.if_car_in_charging(car_id)) and (not pileManager.car_in_wait(car_id)):
+        return jsonify({
+            "code": 0,
+            "message": "空闲",
+            "data": {
+                "car_position": "空闲"
+        }
+        })
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -537,6 +568,7 @@ def lookQuery():
 def adminLog():
     password = request.form["password"]
     info = userManager.login("admin", password)
+    print("admin=", info)
     if info[0] > 0:
         return jsonify({
             "code": 1,
@@ -617,7 +649,6 @@ def lookPileAmount():
 @app.route("/admin/setPrice", methods=["POST"])
 def setPrice():
     token = request.headers.get("Authorization")
-    amount = pileManager.retPipeAmount()
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,

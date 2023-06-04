@@ -44,18 +44,33 @@ class Order(Base):
         self.bill_id = m.hexdigest()
         car_table[car_id] = self.bill_id
 
+
 car_table = {}
+
 
 # 给SLC用的
 def creatOrder(car_id, charge_amount, pile_id):
     session.add(Order(car_id, charge_amount, pile_id))
     session.commit()
+
+
 # 需要提供充电时长，服务费，充电费，总费用
 def finishOrder(car_id, service_fee, total_fee, charge_fee, charge_duration):
-    session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": _datetime.datetime.now()})
+    session.query(Order).filter_by(bill_id=car_table.get(car_id)).update(
+        {"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee,
+         "charge_duration": charge_duration, "end_time": _datetime.datetime.now()})
     session.commit()
+
+
 def findBillId(car_id):
     return car_table[car_id]
+
+
+time_table = {}
+
+
+def createResqTime(car_id):
+    time_table[car_id] = _datetime.datetime.now()
 
     '''
 全局变量
@@ -79,7 +94,6 @@ class LimitedList(list):
 
 # 充电桩管理的类, 隔绝订单和充电桩的交互,
 # 但是和前端无关(比如用户和管理员的查看充电桩状态在这里都是一个函数, 由其他人来区分
-
 class pile_manager(threading.Thread):
     def __init__(self, pile_num=5):
         super().__init__()
@@ -105,6 +119,9 @@ class pile_manager(threading.Thread):
             else:
                 pile_temp = pile(i, charge_mode.F)
             self.pile_pool.append(pile_temp)
+        self.F_list = []
+        self.T_list = []
+        self.waiting_area = LimitedList(6)
 
     # 扔到线程中的运行部分
     def run(self):
@@ -121,18 +138,25 @@ class pile_manager(threading.Thread):
         state = self.pile_pool[id].pile_state()["working_state"]
         print(state)
         return state
+
+    '''
+    这里是所有与管理员有关的部分
+    '''
+
     # 开启充电桩
     def open_pile(self, id):
         for i in self.pile_pool:
             if (i.pile_id == id):
                 i.is_open = True
         pass
+
     # 关闭充电桩
     def close_pile(self, id):
         for i in self.pile_pool:
             if i.pile_id == id:
                 i.is_open = False
         pass
+
     # 查看充电桩报表(所有数据)
     def check_pile_report(self, id):
         state = self.pile_pool[id].pile_state()
@@ -162,7 +186,7 @@ class pile_manager(threading.Thread):
                 self.F_list.append(o)
                 o.init_num(len(self.F_list))
                 len = len(self.F_list)
-
+            createResqTime(car_id)
             return [1, _charge_mode, len]
         except Exception as e:
             print(e)
@@ -193,6 +217,14 @@ class pile_manager(threading.Thread):
         return False
 
 
+
+    # 返回[pile_id, charge_duration, 充电费， 服务费， 总费用]
+    def look_charge_state(self, car_id):
+        pass
+
+    def retPipeAmount(self):
+        return [self.pile_num, self.normal_pile, self.fast_pile]
+
     def look_query(self, car_id):
         _order,x=self.from_carid_to_everything(car_id)
         if x in ["T","F"]: #处于等候区的状态
@@ -200,7 +232,7 @@ class pile_manager(threading.Thread):
                 "car_position": _order.order_state,
                 "car_state": _order.order_state,
                 "queue_num": _order.get_queue_num(),
-                "request_time": _datetime.datetime.now(),
+                "request_time": time_table[car_id],
                 "pile_id": None,
                 "request_mode": _order.request_mode,
                 "request_amount": _order.request_amount
@@ -210,7 +242,7 @@ class pile_manager(threading.Thread):
                 "car_position": _order.order_state,
                 "car_state": _order.order_state,
                 "queue_num": None,
-                "request_time": _datetime.datetime.now(),
+                "request_time": time_table[car_id],
                 "pile_id": x,
                 "request_mode": _order.request_mode,
                 "request_amount": _order.request_amount
@@ -221,7 +253,6 @@ class pile_manager(threading.Thread):
         self.mid_price = mid
         self.high_price = high
 
-
     # 开始充电
     def start_charge(self, car_id):
         flag = False
@@ -231,7 +262,6 @@ class pile_manager(threading.Thread):
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
                 _pile.waiting_list[0].order_state = order_s.on_charge
                 _pile.working_state = charging_pile_state.in_use
-        creatOrder(car_id,)
         return flag
 
     # 取消/结束充电
