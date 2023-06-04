@@ -10,6 +10,11 @@ class LimitedList(list):
             super().append(elem)
         else:
             raise ValueError("List is full.")
+class order_s(Enum):
+    wait_area=0
+    wait_queue=1
+    able_to_charge=2
+    on_charge=3
 
 
 #充电速度
@@ -87,6 +92,13 @@ class pile():
                 break
             count+=1
         return count
+    #塞进等候区
+    def append_waiting_list(self,order):
+        self.waiting_list.append(order)
+        if(len(self.waiting_list)==1):  #如果是第一个
+            order.set_state_able_to_charge()
+        else:
+            order.set_state_wait_queue()
 
 
 
