@@ -50,18 +50,18 @@ car_table = {}
 def creatOrder(car_id, charge_amount, pile_id):
     session.add(Order(car_id, charge_amount, pile_id))
     session.commit()
-
 # 需要提供充电时长，服务费，充电费，总费用
 def finishOrder(car_id, service_fee, total_fee, charge_fee, charge_duration):
     session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": _datetime.datetime.now()})
     session.commit()
-
 def findBillId(car_id):
     return car_table[car_id]
 
     '''
 全局变量
 '''
+
+
 
 
 # 限制最多元素个数的list, 重写list
@@ -79,27 +79,32 @@ class LimitedList(list):
 
 # 充电桩管理的类, 隔绝订单和充电桩的交互,
 # 但是和前端无关(比如用户和管理员的查看充电桩状态在这里都是一个函数, 由其他人来区分
+
 class pile_manager(threading.Thread):
     def __init__(self, pile_num=5):
         super().__init__()
         self.pile_num = pile_num
         # 把这两个填上， 数组里面为充电桩编号 int
-        self.normal_pile = []
-        self.fast_pile = []
+        self.normal_pile = [0,1]
+        self.fast_pile = [2,3,4]
         # 计费的价钱 谷时 平时 峰时
         self.low_price = 0
         self.mid_price = 0
         self.high_price = 0
         self.pile_pool = []
+
+
+        #以下是
+        self.F_list = []
+        self.T_list = []
+        self.waiting_area = LimitedList(6)
+        #实例化五个充电桩
         for i in range(pile_num):
-            if i < 2:
+            if i in self.fast_pile:
                 pile_temp = pile(i, charge_mode.T)
             else:
                 pile_temp = pile(i, charge_mode.F)
             self.pile_pool.append(pile_temp)
-        self.F_list = []
-        self.T_list = []
-        self.waiting_area = LimitedList(6)
 
     # 扔到线程中的运行部分
     def run(self):
@@ -108,7 +113,7 @@ class pile_manager(threading.Thread):
             time.sleep(1)
 
     '''
-        这里是所有管理员和用户共用的部分
+    这里是所有与管理员有关的部分
     '''
 
     # 查看充电桩状态(仅状态)
@@ -116,29 +121,25 @@ class pile_manager(threading.Thread):
         state = self.pile_pool[id].pile_state()["working_state"]
         print(state)
         return state
-
-    '''
-    这里是所有与管理员有关的部分
-    '''
-
     # 开启充电桩
     def open_pile(self, id):
         for i in self.pile_pool:
             if (i.pile_id == id):
                 i.is_open = True
         pass
-
     # 关闭充电桩
     def close_pile(self, id):
         for i in self.pile_pool:
             if i.pile_id == id:
                 i.is_open = False
         pass
-
     # 查看充电桩报表(所有数据)
     def check_pile_report(self, id):
         state = self.pile_pool[id].pile_state()
         return state
+
+    def retPipeAmount(self):
+        return [self.pile_num, self.normal_pile, self.fast_pile]
 
     '''
     这里是所有与用户有关的部分
@@ -176,30 +177,44 @@ class pile_manager(threading.Thread):
     def modify_the_amount_of_charge(self, car_id, amount):
         pass
 
-    # return True or False
+    '''
+    只有小bqww用的
+    '''
+
     def if_car_in_charging(self, car_id):
-        pass
+        a, _ = self.from_carid_to_everything(car_id)
+        if a!=None and a.order_state == order_s.on_charge:
+            return True
+        return False
+    def car_in_wait(self, car_id):
+        a,_ = self.from_carid_to_everything(car_id)
+        if a!=None and a.order_state != order_s.on_charge:
+            return True
+        return False
 
-    def car_in_wait(car_id):
-        pass
-
-    #返回[pile_id, charge_duration, 充电费， 服务费， 总费用]
-    def look_charge_state(self, car_id):
-        pass
-    def retPipeAmount(self):
-        return [self.pile_num, self.normal_pile, self.fast_pile]
 
     def look_query(self, car_id):
-        return {
-            "car_position": None,
-            "car_state": None,
-            "queue_num": None,
-            "request_time": _datetime.datetime.now(),
-            "pile_id": None,
-            "request_mode": None,
-            "request_amount": None
-
-        }
+        _order,x=self.from_carid_to_everything(car_id)
+        if x in ["T","F"]: #处于等候区的状态
+            return {
+                "car_position": _order.order_state,
+                "car_state": _order.order_state,
+                "queue_num": _order.get_queue_num(),
+                "request_time": _datetime.datetime.now(),
+                "pile_id": None,
+                "request_mode": _order.request_mode,
+                "request_amount": _order.request_amount
+            }
+        else:
+            return {
+                "car_position": _order.order_state,
+                "car_state": _order.order_state,
+                "queue_num": None,
+                "request_time": _datetime.datetime.now(),
+                "pile_id": x,
+                "request_mode": _order.request_mode,
+                "request_amount": _order.request_amount
+            }
 
     def setPrice(self, low, mid, high):
         self.low_price = low
@@ -216,6 +231,7 @@ class pile_manager(threading.Thread):
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
                 _pile.waiting_list[0].order_state = order_s.on_charge
                 _pile.working_state = charging_pile_state.in_use
+        creatOrder(car_id,)
         return flag
 
     # 取消/结束充电
@@ -248,23 +264,19 @@ class pile_manager(threading.Thread):
         Fflag = False
         Tflag = False
         # 在当前order中有的时候触发调度
-        if self.waiting_area != []:
-            # print("可以开始调度")
-            for i in self.pile_pool:
-                if i.charge_mode == charge_mode.T and i.check_waiting_list():
-                    # print("   #T队列中有空")
-                    Tflag = True
-                if i.charge_mode == charge_mode.F and i.check_waiting_list():
-                    ##print("   #F队列中有空")
-                    Fflag = True  # F队列中有空
+        Tflag,Fflag = self.is_waiting_list_available()
         # T类充电桩有空
         if Tflag == True:
             self.scheldur(charge_mode.T)
         if Fflag == True:
             self.scheldur(charge_mode.F)
-
         for i in self.pile_pool:
             i.update()
+
+    #用于让某个车重新排队的函数
+    def requeue(self,car_id):
+        _order,x = self.is_waiting_list_available(car_id)
+
 
     # 调度充电桩
     def scheldur(self, _charge_mode):
@@ -276,7 +288,7 @@ class pile_manager(threading.Thread):
                 self.T_list[0].order_state == order_s.wait_queue
                 # 添加到充电桩的waiting_list中
                 for _pile in self.pile_pool:
-                    if _pile.charge_mode == charge_mode.T and _pile.check_waiting_list():
+                    if _pile.charge_mode == charge_mode.T and _pile.check_waiting_list_available():
                         _pile.waiting_list.append(self.T_list[0])
                         break
                 self.T_list.remove(self.T_list[0])  # 在T_list中删除
@@ -289,22 +301,15 @@ class pile_manager(threading.Thread):
                 self.F_list[0].order_state == order_s.wait_queue
                 # 添加到充电桩的waiting_list中
                 for _pile in self.pile_pool:
-                    if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list():
+                    if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available():
                         _pile.waiting_list.append(self.F_list[0])
                         break;
                 self.F_list.remove(self.F_list[0])  # 在T_list中删除
                 for i in self.F_list:  # 更新其他所有T_list中的id
                     i.update_num()
-
         self.PRINT()
 
     def PRINT(self):
-        print("PRINT_pile")
-        for _pile in self.pile_pool:
-            print(f"_pile={_pile.pile_id}")
-            for i in _pile.waiting_list:
-                print(f"i.car_id={i.car_id}", end=";")
-            print("")
         pass
         '''
         print("current waiting_area")
@@ -343,6 +348,35 @@ class pile_manager(threading.Thread):
             for i in _pile.waiting_list:
                 print(f"i.car_id={i.car_id}", end=";")
             print("")
+    #传入car_id, 返回他的订单和所在位置
+    #如果在等候区返回对应的请求id, 如果在充电桩就返回对应的充电桩id
+    def from_carid_to_everything(self,car_id):
+        for i in self.T_list:
+            if i.car_id==car_id:
+                return i,"T"
+        for i in self.F_list:
+            if i.car_id==car_id:
+                return i,"F"
+        for _pile in self.pile_pool:
+            for j in _pile.waiting_list:
+                if j.car_id == car_id:
+                    return j,str(_pile.pile_id)
+        return None,None
+    #查询waiting_list是否有空位
+    def is_waiting_list_available(self):
+        Fflag = False
+        Tflag = False
+        if self.waiting_area != []:
+            # print("可以开始调度")
+            for i in self.pile_pool:
+                if i.charge_mode == charge_mode.T and i.check_waiting_list_available():
+                    # print("   #T队列中有空")
+                    Tflag = True
+                if i.charge_mode == charge_mode.F and i.check_waiting_list_available():
+                    ##print("   #F队列中有空")
+                    Fflag = True  # F队列中有空
+        return Tflag,Fflag
+
 
 
 if __name__ == "__main__":

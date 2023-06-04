@@ -74,7 +74,7 @@ class pile():
 
 
 
-    def check_waiting_list(self):
+    def check_waiting_list_available(self):
         if len(self.waiting_list)==1 or len(self.waiting_list)==0:
             return True
         else:

@@ -3,7 +3,13 @@ from enum import Enum
 class order_s(Enum):
     wait_area=0
     wait_queue=1
-    on_charge=2
+    able_to_charge=2
+    on_charge=3
+
+class charge_mode(Enum):
+    F=0
+    T=1
+
 
 #限制最多元素个数的list, 重写list
 class LimitedList(list):
@@ -29,3 +35,9 @@ class order():
         self.order_num=id
     def update_num(self):
         self.order_num-=1
+
+    def get_queue_num(self):
+        if self.request_mode==charge_mode.T:
+            return f"T{self.order_num}"
+        else:
+            return f"F{self.order_num}"
