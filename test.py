@@ -67,3 +67,15 @@ def test_pile_broke(a):
     time.sleep(2)
     a.set_pile_not_error(2)
     time.sleep(2)
+
+
+def test_mofity_fee(a):
+    time.sleep(3)
+    a.submit_a_charging_request("A", 0.5, "T")
+    time.sleep(2)
+    a.start_charge("A")
+    time.sleep(3)
+    print(a.view_billing("A"))
+    a.setPrice(1000000,2000000,3000000)
+    time.sleep(3)
+    print(a.view_billing("A"))
