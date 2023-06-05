@@ -62,14 +62,19 @@ class OrderManager:
 
     def findBillAll(self, car_id, date):
         num = 0
-        if date == " " or date == None:
-            num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
+        if date == " " or date == None or date == "null" or date == "":
+            num = db.session.query(Order).filter_by(car_id=car_id).count()
         else:
             num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
 
         if num == 0:
             return [0]
-        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
+        info = 0
+        if date == " " or date == None or date == "null" or date == "":
+            info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
+                                    Order.end_time, Order.total_fee, Order.pay_state).filter_by(car_id=car_id).all()
+        else:
+            info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
                                 Order.end_time, Order.total_fee, Order.pay_state).filter_by(car_id=car_id,
                                                                                             bill_date=date).all()
         list = []
@@ -95,12 +100,13 @@ class OrderManager:
                              Order.end_time, Order.total_fee, Order.pay_state, Order.charge_amount,
                              Order.charge_duration, Order.total_charge_fee, Order.total_service_fee).filter_by(
             bill_id=bill_id).first()
-        if len(i) == 0:
-            return [0]
+        print(i)
         return [1, i]
 
     def payBill(self, bill_id):
-        state = db.session.query(Order.pay_state).filter_by(bill_id=bill_id).first()
+        state = db.session.query(Order.pay_state, Order.car_id).filter_by(bill_id=bill_id).first()
+        if pileManager.if_car_in_charging(state[1]):
+            return False
         if state[0] == 0:
             Order.query.filter_by(bill_id=bill_id).update({"pay_state": 1})
             db.session.commit()
@@ -170,7 +176,6 @@ class UserManager:
     def requestC(self, token, amount, mode):
         info = self.tokenList.get(token)
         ret = pileManager.submit_a_charging_request(info[2], amount, mode)
-        print("ret=", ret)
         if ret[0] == 0:
             return [0]
         info[4] = amount
@@ -215,22 +220,21 @@ class UserManager:
             return [0]
         info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.start_time,
                                 Order.charge_amount).filter_by(bill_id=findBillId(car_id)).first()
-        info2 = pileManager.look_charge_state(car_id)
+        info2 = pileManager.view_billing(car_id)
         data = {
             "car_id": car_id,
             "bill_date": info[1],
             "bill_id": findBillId(car_id),
-            "pile_id": info2[0],
+            "pile_id": info2["pip_id"],
             "charge_amount": info[4],
-            "charge_duration": info2[1],
+            "charge_duration": info2["time"],
             "start_time": info[3],
-            "end_time": _datetime.datetime.now(),
-            "total_charge_fee": info2[2],
-            "total_service_fee": info2[3],
-            "total_fee": info2[4]
+            "end_time": None,
+            "total_charge_fee": info2["electric"],
+            "total_service_fee": info2["service"],
+            "total_fee": info2["total_cost"]
 
         }
-
         return [1, data]
 
 
@@ -302,12 +306,18 @@ def getTotalBill():
             "code": 0,
             "message": "useless token."
         })
+    if bill_data == "null" or bill_data == None or bill_data == "":
+        pass
+    else:
+        pass
+    print(bill_data)
     info = orderManager.findBillAll(car_id, bill_data)
     if info[0] == 0:
         return jsonify({
             "code": 0,
             "message": "there is no bill.",
         })
+    print(info[1])
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -327,6 +337,7 @@ def getOnlyBill():
             "message": "useless token."
         })
     bill_id = request.form["bill_id"]
+    print(bill_id)
     i = orderManager.findBillOnly(bill_id)
     if i[0] == 0:
         return jsonify({
@@ -403,6 +414,7 @@ def pay():
             "message": "用户未登录."
         })
     bill_id = request.form["bill_id"]
+
     if orderManager.payBill(bill_id):
         return jsonify({
             "code": 1,
@@ -411,7 +423,7 @@ def pay():
     else:
         return jsonify({
             "code": 0,
-            "message": "重复支付."
+            "message": "重复支付或者正在充电中或者订单不存在."
         })
 
 
@@ -476,12 +488,30 @@ def requestCharge():
         }
     })
 
+@app.route("/user/getChargingState", methods=["POST"])
+def lookCharge():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    car_id = request.form["car_id"]
+    info = userManager.lookState(car_id)
+    if info[0] == 0:
+        return jsonify({
+            "code": 0,
+            "message": "failed.",
+        })
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": info[1]
+    })
 
 @app.route("/user/changeChargingAmount", methods=['POST'])
 def changeAmount():
     token = request.headers.get("Authorization")
-    print(token)
-    print(userManager.tokenList)
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
@@ -552,20 +582,21 @@ def lookQuery():
             "message": "用户未登录."
         })
     car_id = request.form["car_id"]
-    if orderManager.if_no_pay(car_id):
-        return jsonify({
-            "code": 1,
-            "message": "充电结束",
-            "data": {
-                "car_position": None,
-                "car_state": "充电结束",
-                "queue_num": None,
-                "request_time": None,
-                "pile_id": None,
-                "request_mode": None,
-                "request_amount": None
-            }
-        })
+    if (not pileManager.if_car_in_charging(car_id)) and (not pileManager.car_in_wait(car_id)):
+        if orderManager.if_no_pay(car_id):
+            return jsonify({
+                "code": 1,
+                "message": "充电结束",
+                "data": {
+                    "car_position": None,
+                    "car_state": "充电结束",
+                    "queue_num": None,
+                    "request_time": None,
+                    "pile_id": None,
+                    "request_mode": None,
+                    "request_amount": None
+                }
+            })
 
     if (not pileManager.if_car_in_charging(car_id)) and (not pileManager.car_in_wait(car_id)):
         return jsonify({

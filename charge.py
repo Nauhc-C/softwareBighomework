@@ -203,7 +203,7 @@ class pile_manager(threading.Thread):
         elif(_order.order_state==order_s.able_to_charge):
             _state="允许充电"
         else:
-            _state="on_charge"
+            _state="正在充电"
         if _order.request_mode == charge_mode.T:
             _mode="T"
         else:
@@ -223,7 +223,7 @@ class pile_manager(threading.Thread):
                 "car_position": _state,
                 "car_state": _state,
                 "queue_num": _order.get_queue_num(),
-                "request_time": _datetime.datetime.now(),
+                "request_time": time_table[car_id],
                 "pile_id": None,
                 "request_mode": "F",
                 "request_amount": _order.request_amount
@@ -280,10 +280,13 @@ class pile_manager(threading.Thread):
         elif position=='pile':
             self.submit_a_charging_request(car_id, amount, mode)
     #用于查看订单
-    def view_billing(self,car_id):
+    def view_billing(self, car_id):
         try:
             order,_=self.from_carid_to_everything(car_id)
-            return order.get_cost()
+            _,pile = self.from_carid_to_everything(car_id)
+            a = order.get_cost()
+            a["pip_id"] = pile
+            return a
         except Exception as e:
             print(e)
             return None
@@ -362,8 +365,6 @@ class pile_manager(threading.Thread):
         #更新所有时刻
         for i in self.pile_pool:
             i.update()
-
-        self.PRINT()
 
 
 
