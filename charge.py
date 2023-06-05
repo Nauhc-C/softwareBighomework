@@ -19,6 +19,27 @@ Session = sessionmaker(bind=engine)
 session = Session()
 
 
+class MyTime(threading.Thread):
+
+    def __init__(self):
+        super().__init__()
+        self.mydate = _datetime.datetime(2023, 6, 5, 7, 50, 00, 00)
+
+    def run(self):
+        while True:
+            self.mydate = self.mydate + _datetime.timedelta(seconds=20)
+            time.sleep(1)
+
+    def getData(self):
+        return self.mydate.date()
+
+    def getDataTime(self):
+        return self.mydate
+
+
+myTime = MyTime()
+myTime.start()
+
 class Order(Base):
     __tablename__ = "order"
     bill_id = Column(String(50), primary_key=True, nullable=False)
@@ -30,9 +51,9 @@ class Order(Base):
     total_service_fee = Column(Float, default=0)
     total_fee = Column(Float, default=0)
     pay_state = Column(Integer, default=0)
-    start_time = Column(DateTime, nullable=False, default=_datetime.datetime.now())
+    start_time = Column(DateTime, nullable=False, default=myTime.getDataTime())
     end_time = Column(DateTime, default=None)
-    bill_date = Column(Date, nullable=False, default=_datetime.date.today())
+    bill_date = Column(Date, nullable=False, default=myTime.getData())
 
 
     def __init__(self, car_id, charge_amount, pile_id):
@@ -40,8 +61,10 @@ class Order(Base):
         self.charge_amount = charge_amount
         self.pile_id = pile_id
         m = hashlib.md5()
-        m.update((car_id + str(pile_id) + _datetime.datetime.now().isoformat()).encode(encoding="utf-8"))
+        m.update((car_id + str(pile_id) + myTime.getDataTime().isoformat()).encode(encoding="utf-8"))
         self.bill_id = m.hexdigest()
+        self.start_time = myTime.getDataTime()
+        self.bill_date = myTime.getData()
         car_table[car_id] = self.bill_id
 
 car_table = {}
@@ -53,7 +76,7 @@ def creatOrder(car_id, charge_amount, pile_id):
     session.commit()
 # 需要提供充电时长，服务费，充电费，总费用
 def finishOrder(car_id, service_fee, total_fee, charge_fee, charge_duration):
-    session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": _datetime.datetime.now()})
+    session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": myTime.getDataTime()})
     session.commit()
 def findBillId(car_id):
     return car_table[car_id]
@@ -63,7 +86,7 @@ def findBillId(car_id):
 '''
 
 def create_time_table(car_id):
-    time_table[car_id] = _datetime.datetime.now()
+    time_table[car_id] = myTime.getDataTime()
 
 
 # 限制最多元素个数的list, 重写list
@@ -464,7 +487,6 @@ class pile_manager(threading.Thread):
                     ##print("   #F队列中有空")
                     Fflag = True  # F队列中有空
         return Tflag,Fflag
-
 
 
 if __name__ == "__main__":
