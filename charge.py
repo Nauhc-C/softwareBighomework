@@ -203,7 +203,10 @@ class pile_manager(threading.Thread):
             _state="able_to_charge"
         else:
             _state="on_charge"
-
+        if _order.request_mode == charge_mode.T:
+            _mode="T"
+        else:
+            _mode="F"
         if x in ["T"]: #处于等候区的状态
             return {
                 "car_position": _state,
@@ -231,7 +234,7 @@ class pile_manager(threading.Thread):
                 "queue_num": None,
                 "request_time": time_table[car_id],
                 "pile_id": x,
-                "request_mode": _order.request_mode,
+                "request_mode": _mode,
                 "request_amount": _order.request_amount
             }
 
