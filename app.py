@@ -582,7 +582,25 @@ def lookQuery():
         "data": pileManager.look_query(car_id)
     })
 
-
+@app.route("/user/beginCharging", methods=["POST"])
+def beginCharge():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    car_id = request.form["car_id"]
+    if pileManager.start_charge(car_id):
+        return jsonify({
+            "code": 1,
+            "message": "正在充电."
+        })
+    else:
+        return jsonify({
+            "code": 0,
+            "message": "无法."
+        })
 @app.route("/admin/login", methods=["POST"])
 def adminLog():
     password = request.form["password"]

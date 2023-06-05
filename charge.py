@@ -189,18 +189,18 @@ class pile_manager(threading.Thread):
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
                 _pile.waiting_list[0].set_state_on_charge()
                 _pile.working_state = charging_pile_state.in_use
-                creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.waiting_list[0].request_mode)
+                creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.pile_id)
         return flag
     # 轮询查看订单状态
     def look_query(self, car_id):
         _order,x=self.from_carid_to_everything(car_id)
         _state=""
         if(_order.order_state==order_s.wait_area):
-            _state="wait_area" #等候区
+            _state="处于等待区" #等候区
         elif(_order.order_state==order_s.wait_queue):
-            _state="wait_queue"
+            _state="处于充电区"
         elif(_order.order_state==order_s.able_to_charge):
-            _state="able_to_charge"
+            _state="允许充电"
         else:
             _state="on_charge"
         if _order.request_mode == charge_mode.T:
