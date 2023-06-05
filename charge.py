@@ -187,6 +187,7 @@ class pile_manager(threading.Thread):
         return [len(self.normal_pile)+len(self.fast_pile), self.normal_pile, self.fast_pile]
     #设置价格
     def setPrice(self, low, mid, high):
+        print(f"low={low}")
         for _pile in self.pile_pool:
             _pile.set_price(low,mid,high)
     '''
@@ -228,7 +229,7 @@ class pile_manager(threading.Thread):
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
                 _pile.waiting_list[0].set_state_on_charge()
                 _pile.working_state = charging_pile_state.in_use
-                creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.pile_id)
+                #creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.pile_id)
         return flag
     # 轮询查看订单状态
     def look_query(self, car_id):
@@ -342,14 +343,6 @@ class pile_manager(threading.Thread):
         if a!=None and a.order_state != order_s.on_charge:
             return True
         return False
-
-
-
-    def setPrice(self, low, mid, high):
-        self.low_price = low
-        self.mid_price = mid
-        self.high_price = high
-
 
 
 
@@ -507,4 +500,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_pile_broke(a)
+    test.test_mofity_fee(a)
