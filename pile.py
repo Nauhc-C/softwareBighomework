@@ -37,8 +37,8 @@ class charge_mode(Enum):
 class pile():
     def __init__(self,id,_charge_mode):
         self.pile_id=id
-        self.is_open=False
-        self.working_state=charging_pile_state.close
+        self.is_open=True
+        self.working_state=charging_pile_state.idle
         self.total_charge_num=0            #总计充电次数
         self.total_charge_time=0           #总计充电时间
         self.total_capacity=0              #总计充电量
@@ -64,6 +64,7 @@ class pile():
     def update(self):
         #只有运行中的需要更新
         if self.working_state==charging_pile_state.in_use:
+            print(f"pile:{self.pile_id}is use")
             self.total_charge_time+=1
             if(self.charge_mode==charge_mode.T):
                 self.remianing_total-=F_charge_per_second/3600
@@ -92,6 +93,7 @@ class pile():
 
         #最后清除这一单
         self.waiting_list.remove(self.waiting_list[0])
+        print("over")
 
 
 

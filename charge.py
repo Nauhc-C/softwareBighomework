@@ -339,6 +339,8 @@ class pile_manager(threading.Thread):
         for i in self.pile_pool:
             i.update()
 
+        self.PRINT()
+
 
 
 
@@ -395,9 +397,10 @@ class pile_manager(threading.Thread):
         print("====")
         print("PRINT_pile")
         for _pile in self.pile_pool:
-            print(f"_pile={_pile.pile_id}")
+            print(f"_pile={_pile.pile_id},work_state={_pile.working_state}")
             for i in _pile.waiting_list:
                 print(f"i.car_id={i.car_id}", end=";")
+
             print("")
         print("======================")
 
@@ -440,8 +443,8 @@ class pile_manager(threading.Thread):
 
 
 if __name__ == "__main__":
-    creatOrder("ADX100", 123, 123)
-    finishOrder("ADX100", 100, 110, 10, 50.1)
+    #creatOrder("ADX100", 123, 123)
+    #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_create(a)
+    test.test_over(a)
