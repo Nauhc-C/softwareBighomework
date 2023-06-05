@@ -35,11 +35,23 @@ class order():
         self.service_cost=0
         self.electric_cost=0
         self.charge_time=0
+        self.wait_time=0
 
     def init_num(self,id):
         self.order_num=id
     def update_num(self):
         self.order_num-=1
+
+    def get_order(self):
+        if self.request_mode==charge_mode.T:
+            _mode='T'
+        else:
+            _mode='F'
+
+        return {
+            "request_mode":_mode,
+
+        }
 
     def get_queue_num(self):
         if self.request_mode==charge_mode.T:
