@@ -837,6 +837,16 @@ def lookQueryPile():
         }
     })
 
+@app.route("/admin/queryReport", methods=["POST"])
+def checkReport():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+
+
 with app.app_context():
     db.create_all()
     m = hashlib.md5()
