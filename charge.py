@@ -142,6 +142,19 @@ class pile_manager(threading.Thread):
     '''
     这里是所有与管理员有关的部分
     '''
+    #查看队列状态
+    def get_queue_state(self):
+        list=[]
+        for _pile in self.pile_pool:
+
+            a = {
+                "request_amount":_pile.waiting_list[0].requeset_amount,
+                "wait_time":_pile.waiting_list[0].wait_time,
+                "pile_id":_pile.pile_id,
+                "car_state":_pile.waiting_list[0].order_s,
+                "request_mode":_pile
+            }
+
 
     #  完成  查看充电桩状态(仅状态)
     def check_pile_state(self, id):
@@ -153,6 +166,8 @@ class pile_manager(threading.Thread):
         for i in self.pile_pool:
             if i.pile_id == id and i.working_state==charging_pile_state.close:
                 i.working_state=charging_pile_state.idle
+            if i.pile_id == id and i.working_state==charging_pile_state.broke:
+                i.set_not_error()
         pass
     # 关闭充电桩
     def close_pile(self, id):
