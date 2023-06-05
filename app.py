@@ -6,7 +6,7 @@ import hashlib
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 import _datetime
-from charge import pile_manager, findBillId, myTime, MyTime
+from charge import pile_manager, findBillId, myTime, MyTime, time_table
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -203,6 +203,29 @@ class UserManager:
 
         return True
 
+    def findAllCarState(self):
+        list = []
+        info1 = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).all()
+        for value in info1:
+            print(value[2])
+            print(pileManager.if_car_in_charging(value[2]))
+            print(pileManager.car_in_wait(value[2]))
+            if (not pileManager.if_car_in_charging(value[2])) and (not pileManager.car_in_wait(value[2])):
+                continue
+            info = pileManager.look_query(value[2])
+            dict = {}
+            dict["user_id"] = str(value[0])
+            dict["car_capacity"] = value[3]
+            dict["request_amount"] = info["request_amount"]
+            dict["pile_id"] = info["pile_id"]
+            end_time = myTime.getDataTime()
+            ini_time = time_table[value[2]]
+            dict["wait_time"] = (end_time - ini_time).total_seconds()
+            dict["car_state"] = info["car_state"]
+            dict["request_mode"] = info["request_mode"]
+            list.append(dict)
+        return list
+
     def modifyMode(self, token, car_id, mode):
         userInfo = self.tokenList.get(token)
         userInfo[5] = mode
@@ -307,7 +330,9 @@ def getTotalBill():
     if bill_data == "null" or bill_data == None or bill_data == "":
         pass
     else:
-        pass
+        bill_data = _datetime.datetime.strptime(bill_data, '%Y-%m-%d')
+        print(bill_data)
+        bill_data = bill_data.date()
     info = orderManager.findBillAll(car_id, bill_data)
     if info[0] == 0:
         return jsonify({
@@ -514,6 +539,7 @@ def changeAmount():
         })
     amount = request.form["request_amount"]
     car_id = request.form["car_id"]
+    amount = int(amount)
     if userManager.modifyAmount(car_id, amount):
         return jsonify({
             "code": 1,
@@ -720,13 +746,17 @@ def lookPileAmount():
             "code": 0,
             "message": "用户未登录."
         })
+    dictl = [[], []]
+    for i in range(1, 3):
+        for j in amount[i]:
+            dictl[i - 1].append({"pile_id": j})
     return jsonify({
         "code": 1,
         "message": "success.",
         "data": {
             "amount": amount[0],
-            "fast_pile_id": amount[2],
-            "slow_pile_id": amount[1]
+            "fast_pile_id": dictl[1],
+            "slow_pile_id": dictl[0]
         }
     })
 
@@ -742,21 +772,82 @@ def setPrice():
     low = request.form["low_price"]
     mid = request.form["mid_price"]
     high = request.form["high_price"]
+    low = int(low)
+    mid = int(mid)
+    high = int(high)
     pileManager.setPrice(low, mid, high)
     return jsonify({
         "code": 1,
         "message": "success."
     })
 
+@app.route("/admin/powerCrash", methods=["POST"])
+def setCrash():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    pile_id = request.form["pile_id"]
+    pileManager.set_pile_error(pile_id)
+    return jsonify({
+        "code": 1,
+        "message": "已故障."
+    })
+
+@app.route("/admin/queryQueueState", methods=["POST"])
+def lookQueueC():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    info = userManager.findAllCarState()
+    print(info)
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": {
+            "state_list": info
+        }
+    })
+
+@app.route("/admin/queryPileState", methods=["POST"])
+def lookQueryPile():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    pile_id = request.form["pile_id"]
+    pile_id = int(pile_id)
+    info = pileManager.check_pile_report()[pile_id]
+    return jsonify({
+        "code": 1,
+        "message": "success.",
+        "data": {
+            "workingState": info["working_state"],
+            "totalChargeNum": info["total_charge_num"],
+            "totalChargeTime": info["total_charge_time"],
+            "totalCapacity": info["total_capacity"],
+            "charge_mode": info["charge_mode"]
+        }
+    })
 
 with app.app_context():
-    db.drop_all()
     db.create_all()
     m = hashlib.md5()
-    m.update("zxc123456".encode(encoding="utf-8"))
-    db.session.add(User("admin", m.hexdigest(), None, None))
-    db.session.commit()
+    count = db.session.query(User).filter_by(user_name="admin").count()
+    if count == 0:
+        m.update("zxc123456".encode(encoding="utf-8"))
+        db.session.add(User("admin", m.hexdigest(), None, None))
+        db.session.commit()
     pileManager.start()
+
+
 
 
 if __name__ == '__main__':
