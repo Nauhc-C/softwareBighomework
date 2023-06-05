@@ -187,20 +187,40 @@ class pile_manager(threading.Thread):
     # 轮询查看订单状态
     def look_query(self, car_id):
         _order,x=self.from_carid_to_everything(car_id)
-        if x in ["T","F"]: #处于等候区的状态
+        _state=""
+        if(_order.order_state==order_s.wait_area):
+            _state="wait_area" #等候区
+        elif(_order.order_state==order_s.wait_queue):
+            _state="wait_queue"
+        elif(_order.order_state==order_s.able_to_charge):
+            _state="able_to_charge"
+        else:
+            _state="on_charge"
+
+        if x in ["T"]: #处于等候区的状态
             return {
-                "car_position": _order.order_state,
-                "car_state": _order.order_state,
+                "car_position": _state,
+                "car_state": _state,
                 "queue_num": _order.get_queue_num(),
                 "request_time": _datetime.datetime.now(),
                 "pile_id": None,
-                "request_mode": _order.request_mode,
+                "request_mode": "T",
+                "request_amount": _order.request_amount
+            }
+        elif x == "F":
+            return {
+                "car_position": _state,
+                "car_state": _state,
+                "queue_num": _order.get_queue_num(),
+                "request_time": _datetime.datetime.now(),
+                "pile_id": None,
+                "request_mode": "F",
                 "request_amount": _order.request_amount
             }
         else:
             return {
-                "car_position": _order.order_state,
-                "car_state": _order.order_state,
+                "car_position": _state,
+                "car_state": _state,
                 "queue_num": None,
                 "request_time": _datetime.datetime.now(),
                 "pile_id": x,
