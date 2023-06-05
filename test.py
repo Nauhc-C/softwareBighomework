@@ -27,3 +27,11 @@ def test_create(a):
     print(a.waiting_area)
 
     #print(a.check_pile_report(1))
+
+def test_over(a):
+    a.submit_a_charging_request("A", 0.016, "T")
+    time.sleep(3)
+    a.start_charge("A")
+    time.sleep(3)
+    print(a.if_car_in_charging("A"))
+    print(a.car_in_wait("A"))

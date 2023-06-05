@@ -61,7 +61,12 @@ class OrderManager:
         pass
 
     def findBillAll(self, car_id, date):
-        num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
+        num = 0
+        if date == " " or date == None:
+            num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
+        else:
+            num = db.session.query(Order).filter_by(car_id=car_id, bill_date=date).count()
+
         if num == 0:
             return [0]
         info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
@@ -707,6 +712,7 @@ def setPrice():
 
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
+    db.drop_all()
     db.create_all()
     m = hashlib.md5()
     m.update("zxc123456".encode(encoding="utf-8"))

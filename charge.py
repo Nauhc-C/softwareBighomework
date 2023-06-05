@@ -304,6 +304,7 @@ class pile_manager(threading.Thread):
     # 取消/结束充电
     def end_charge(self, car_id):
         flag = False
+        _order,_ = self.from_carid_to_everything(car_id)
         # 判断是在充电区还是在等候区
         #在等候区
         for i in self.waiting_area:
@@ -319,7 +320,14 @@ class pile_manager(threading.Thread):
         for _pile in self.pile_pool:
             if (_pile.waiting_list != [] and _pile.check_car_id(car_id) == 1): #充电桩中存在waiting
                 flag = True
-                _pile.waiting_list[0].order_state = order_s.on_charge
+
+                if _pile.waiting_list[0].order_state == order_s.on_charge:#正在充电则结束充电
+                    _pile.over()
+                elif  _pile.waiting_list[0].order_state == order_s.able_to_charge: #还没充电就消除这一单然后去排队
+                    _pile.waiting_list.remove(_order)
+                    self.requeue(car_id,_order.request_amount,_order.request_mode)
+
+
         pass
 
     '''
@@ -339,7 +347,7 @@ class pile_manager(threading.Thread):
         for i in self.pile_pool:
             i.update()
 
-        self.PRINT()
+        #self.PRINT()
 
 
 
@@ -368,12 +376,12 @@ class pile_manager(threading.Thread):
                 # 添加到充电桩的waiting_list中
                 for _pile in self.pile_pool:
                     if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available():
-                        _pile.waiting_list.append(self.F_list[0])
+                        _pile.append_waiting_list(self.F_list[0])
                         break;
                 self.F_list.remove(self.F_list[0])  # 在T_list中删除
                 for i in self.F_list:  # 更新其他所有T_list中的id
                     i.update_num()
-        self.PRINT()
+        #self.PRINT()
 
     def PRINT(self):
         print("======================")
