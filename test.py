@@ -32,6 +32,15 @@ def test_over(a):
     a.submit_a_charging_request("A", 0.016, "T")
     time.sleep(3)
     a.start_charge("A")
-    time.sleep(3)
+    time.sleep(10)
     print(a.if_car_in_charging("A"))
-    print(a.car_in_wait("A"))
+    print(a.view_billing("A"))
+
+def test_cancel(a):
+    a.submit_a_charging_request("A", 0.016, "T")
+    time.sleep(3)
+    a.end_charge("A")
+    a.start_charge("A")
+    time.sleep(3)
+
+    time.sleep(10)

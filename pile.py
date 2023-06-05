@@ -66,14 +66,17 @@ class pile():
         if self.working_state==charging_pile_state.in_use:
             print(f"pile:{self.pile_id}is use")
             self.total_charge_time+=1
+            self.waiting_list[0].charge_time+=1
             if(self.charge_mode==charge_mode.T):
                 self.remianing_total-=F_charge_per_second/3600
                 self.total_capacity+=F_charge_per_second/3600
-                self.waiting_list[0].fee+=(F_charge_per_second/3600)*self.get_current_price()         #计费
+                self.waiting_list[0].electric_cost+=(F_charge_per_second/3600)*self.get_current_price()         #计费
+                self.waiting_list[0].service_cost+=(F_charge_per_second/3600)*0.8
             else:
                 self.remianing_total-=T_charge_per_second/3600
                 self.total_capacity+=T_charge_per_second/3600
-                self.waiting_list[0].fee += (T_charge_per_second / 3600) * self.get_current_price()   #计费
+                self.waiting_list[0].electric_cost += (T_charge_per_second / 3600) * self.get_current_price()   #计费
+                self.waiting_list[0].service_cost += (F_charge_per_second / 3600) * 0.8
             #以下是正常的状态的更新
             if(self.remianing_total<=0):
                 self.over()

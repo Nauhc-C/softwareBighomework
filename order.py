@@ -31,7 +31,10 @@ class order():
         self.request_mode=request_mode
         self.order_num=0
         self.order_state=order_s.wait_area
-        self.fee=0
+        self.total_cost=0
+        self.service_cost=0
+        self.electric_cost=0
+        self.charge_time=0
 
     def init_num(self,id):
         self.order_num=id
@@ -55,3 +58,11 @@ class order():
     #在开始充电时调用
     def set_state_on_charge(self):
         self.order_state = order_s.on_charge
+
+    def get_cost(self):
+        return {
+            "total_cost": self.service_cost+self.electric_cost,  # 总费用
+            "service": self.service_cost,  # 服务费
+            "electric": self.electric_cost,  # 电费
+            "time": self.charge_time / 3600  # 充电时间(小时
+        }

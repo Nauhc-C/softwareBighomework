@@ -266,16 +266,26 @@ class pile_manager(threading.Thread):
             return False
 
     # 用于让某个车重新排队的函数, 调用这个函数的时候只会在order在等候区
-    def requeue(self, car_id,amount,mode):
-        order, x = self.from_carid_to_everything(car_id)
-        if x == "T":
-            self.T_list.remove(order)
-        else:
-            self.F_list.remove(order)
-        self.waiting_area.remove(order)
-        self.submit_a_charging_request(car_id,amount,mode)
-
-
+    def requeue(self, car_id,amount,mode,position='area'):
+        if position == 'area':
+            print(f"charge--requeue mode={mode}")
+            order, _ = self.from_carid_to_everything(car_id)
+            if mode == charge_mode.T:
+                self.T_list.remove(order)
+            elif mode == charge_mode.F:
+                self.F_list.remove(order)
+            self.waiting_area.remove(order)
+            self.submit_a_charging_request(car_id,amount,mode)
+        elif position=='pile':
+            self.submit_a_charging_request(car_id, amount, mode)
+    #用于查看订单
+    def view_billing(self,car_id):
+        try:
+            order,_=self.from_carid_to_everything(car_id)
+            return order.get_cost()
+        except Exception as e:
+            print(e)
+            return None
     '''
     只有小bqww用的
     '''
@@ -303,6 +313,7 @@ class pile_manager(threading.Thread):
 
     # 取消/结束充电
     def end_charge(self, car_id):
+        #print(f"charge--end_charge")
         flag = False
         _order,_ = self.from_carid_to_everything(car_id)
         # 判断是在充电区还是在等候区
@@ -310,22 +321,26 @@ class pile_manager(threading.Thread):
         for i in self.waiting_area:
             if i.car_id == car_id:
                 flag = True
-                # 在充电区
                 if i.request_mode == charge_mode.T:
                     self.T_list.remove(i)
                 else:
                     self.F_list.remove(i)
                 self.waiting_area.remove(i)  # 在所有list中删除他即可
+                #print(f"charge--end_charge in waiting area")
         #在充电区
         for _pile in self.pile_pool:
-            if (_pile.waiting_list != [] and _pile.check_car_id(car_id) == 1): #充电桩中存在waiting
+            if (_pile.waiting_list != [] and _pile.check_car_id(car_id) == 0): #充电桩中存在waiting且当前car_id在第一位
                 flag = True
-
+                #print(f"charge--end_charge 定位到充电桩{_pile.pile_id}")
                 if _pile.waiting_list[0].order_state == order_s.on_charge:#正在充电则结束充电
+                    #print(f"charge--end_charge on charge")
                     _pile.over()
                 elif  _pile.waiting_list[0].order_state == order_s.able_to_charge: #还没充电就消除这一单然后去排队
                     _pile.waiting_list.remove(_order)
-                    self.requeue(car_id,_order.request_amount,_order.request_mode)
+                    #print(f"charge--end_charge car_id={car_id}  "
+                    #      f"_order.request_amount={_order.request_amount}   "
+                    #      f"_order.request_mode={_order.request_mode}")
+                    #self.requeue(car_id,_order.request_amount,_order.request_mode,'pile')
 
 
         pass
@@ -455,4 +470,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_over(a)
+    test.test_cancel(a)
