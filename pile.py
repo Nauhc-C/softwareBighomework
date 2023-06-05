@@ -62,13 +62,27 @@ class pile():
         self.working_state=charging_pile_state.idle
     #返回所有状态
     def pile_state(self):
+        if self.working_state == charging_pile_state.idle:
+            _state="空闲"
+        elif self.working_state == charging_pile_state.in_use:
+            _state="使用中"
+        elif self.working_state == charging_pile_state.broke:
+            _state="损坏"
+        elif self.working_state == charging_pile_state.close:
+            _state="关闭"
+
+        if self.charge_mode==charge_mode.T:
+            _mode='T'
+        else:
+            _mode='F'
+
         info_dict = {
             "pile_id": self.pile_id,
-            "working_state": self.working_state,
+            "working_state": _state,
             "total_charge_num": self.total_charge_num,
             "total_charge_time": self.total_charge_time,
             "total_capacity": self.total_capacity,
-            "charge_mode": self.charge_mode
+            "charge_mode": _mode
         }
         return info_dict
 
