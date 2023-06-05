@@ -2,14 +2,14 @@ import time
 
 def test_create(a):
     time.sleep(1)
-    print(a.submit_a_charging_request(2, 100, "T"))
+    print(a.submit_a_charging_request("2", 100, "T"))
     a.PRINT()
     time.sleep(1)
-    print(a.submit_a_charging_request(6, 100, "F"))
+    print(a.submit_a_charging_request("12332", 100, "F"))
     a.PRINT()
     time.sleep(1)
     print(a.start_charge(6))
-    print(a.submit_a_charging_request(7, 100, "T"))
+    print(a.submit_a_charging_request("asdasd", 100, "T"))
     a.PRINT()
     time.sleep(1)
     print(a.submit_a_charging_request(1, 100, "F"))
@@ -26,4 +26,4 @@ def test_create(a):
     print(a.submit_a_charging_request(19, 100, "T"))
     print(a.waiting_area)
 
-    print(a.check_pile_report(1))
+    #print(a.check_pile_report(1))

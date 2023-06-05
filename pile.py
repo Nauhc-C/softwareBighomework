@@ -43,9 +43,12 @@ class pile():
         self.total_charge_time=0           #总计充电时间
         self.total_capacity=0              #总计充电量
         self.charge_mode=_charge_mode      #充电模式
-        self.order=None                    #外部传入的订单
         self.remianing_total=0
-        self.waiting_list=LimitedList(2)
+        self.waiting_list=LimitedList(2)   #充电区的两个位置(如果需要更改就直接改这里即可)
+
+        self.low_price = 0.4
+        self.mid_price = 0.7
+        self.high_price = 1.0
     #返回所有状态
     def pile_state(self):
         info_dict = {
@@ -63,18 +66,31 @@ class pile():
         if self.working_state==charging_pile_state.in_use:
             self.total_charge_time+=1
             if(self.charge_mode==charge_mode.T):
-                self.remianing_total-=30
+                self.remianing_total-=F_charge_per_second/3600
+                self.total_capacity+=F_charge_per_second/3600
+                self.waiting_list[0].fee+=(F_charge_per_second/3600)*self.get_current_price()         #计费
             else:
-                self.remianing_total-=7
-
-
-
+                self.remianing_total-=T_charge_per_second/3600
+                self.total_capacity+=T_charge_per_second/3600
+                self.waiting_list[0].fee += (T_charge_per_second / 3600) * self.get_current_price()   #计费
             #以下是正常的状态的更新
             if(self.remianing_total<=0):
-                self.over(self.remianing_total)
+                self.over()
 
-    def over(self,more):
+    def over(self):
+        #首先停止充电
         self.working_state=charging_pile_state.idle
+        #然后进入统计
+        self.total_charge_num+=1
+
+
+
+
+
+
+
+
+        #最后清除这一单
         self.waiting_list.remove(self.waiting_list[0])
 
 
@@ -99,6 +115,28 @@ class pile():
             order.set_state_able_to_charge()
         else:
             order.set_state_wait_queue()
+
+    def get_current_price(self):
+        import datetime
+
+        now = datetime.datetime.now()  # 获取当前时间
+        if 7 <= now.hour < 10:
+            return self.mid_price
+        elif 10 <= now.hour < 15:
+            return self.high_price
+        elif 15 <= now.hour < 18:
+            return self.mid_price
+        elif 18 <= now.hour < 21:
+            return self.high_price
+        elif 21 <= now.hour < 23:
+            return self.mid_price
+        else:
+            return self.low_price
+
+    def set_price(self,low,mid,high):
+        self.low_price=low
+        self.mid_price=mid
+        self.high_price=high
 
 
 

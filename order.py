@@ -31,6 +31,7 @@ class order():
         self.request_mode=request_mode
         self.order_num=0
         self.order_state=order_s.wait_area
+        self.fee=0
 
     def init_num(self,id):
         self.order_num=id
