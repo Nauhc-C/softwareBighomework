@@ -44,3 +44,12 @@ def test_cancel(a):
     time.sleep(3)
 
     time.sleep(10)
+
+def test_pile_open_or_close(a):
+    time.sleep(2)
+    a.close_pile(2)
+    time.sleep(2)
+    a.close_pile(2)
+    time.sleep(2)
+    a.open_pile(2)
+    time.sleep(2)

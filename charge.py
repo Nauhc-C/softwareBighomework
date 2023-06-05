@@ -128,14 +128,15 @@ class pile_manager(threading.Thread):
     # 开启充电桩
     def open_pile(self, id):
         for i in self.pile_pool:
-            if (i.pile_id == id):
-                i.is_open = True
+            if i.pile_id == id and i.working_state==charging_pile_state.close:
+                i.working_state=charging_pile_state.idle
         pass
     # 关闭充电桩
     def close_pile(self, id):
+        print(f"close_pile id = {id}")
         for i in self.pile_pool:
-            if i.pile_id == id:
-                i.is_open = False
+            if i.pile_id == id and i.working_state==charging_pile_state.idle:
+                i.working_state=charging_pile_state.close
         pass
     # 查看充电桩报表(所有数据)
     def check_pile_report(self):
@@ -362,7 +363,7 @@ class pile_manager(threading.Thread):
         for i in self.pile_pool:
             i.update()
 
-        #self.PRINT()
+        self.PRINT()
 
 
 
@@ -455,10 +456,10 @@ class pile_manager(threading.Thread):
         if self.waiting_area != []:
             # print("可以开始调度")
             for i in self.pile_pool:
-                if i.charge_mode == charge_mode.T and i.check_waiting_list_available():
+                if i.charge_mode == charge_mode.T and i.check_waiting_list_available() and i.working_state==charging_pile_state.idle:
                     # print("   #T队列中有空")
                     Tflag = True
-                if i.charge_mode == charge_mode.F and i.check_waiting_list_available():
+                if i.charge_mode == charge_mode.F and i.check_waiting_list_available() and i.working_state==charging_pile_state.idle:
                     ##print("   #F队列中有空")
                     Fflag = True  # F队列中有空
         return Tflag,Fflag
@@ -470,4 +471,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_cancel(a)
+    test.test_pile_open_or_close(a)
