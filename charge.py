@@ -45,7 +45,6 @@ class Order(Base):
         car_table[car_id] = self.bill_id
 
 car_table = {}
-time_table = {}
 
 # 给SLC用的
 def creatOrder(car_id, charge_amount, pile_id):
@@ -62,8 +61,7 @@ def findBillId(car_id):
 全局变量
 '''
 
-def create_time_table(car_id):
-    time_table[car_id] = _datetime.datetime.now()
+
 
 
 # 限制最多元素个数的list, 重写list
@@ -85,23 +83,20 @@ class LimitedList(list):
 class pile_manager(threading.Thread):
     def __init__(self, pile_num=5):
         super().__init__()
-        self.pile_num = pile_num
         # 把这两个填上， 数组里面为充电桩编号 int
         self.normal_pile = [0,1]
         self.fast_pile = [2,3,4]
-        # 计费的价钱 谷时 平时 峰时
-        self.low_price = 0
-        self.mid_price = 0
-        self.high_price = 0
         self.pile_pool = []
 
 
-        #以下是
+        #以下是等候区
         self.F_list = []
         self.T_list = []
-        self.waiting_area = LimitedList(6)
+        self.waiting_area = LimitedList(6)  #修改这个数字更改等候区容量
+        #故障队列
+        self.error_list=[]
         #实例化五个充电桩
-        for i in range(pile_num):
+        for i in range(len(self.normal_pile)+len(self.fast_pile)):
             if i in self.fast_pile:
                 pile_temp = pile(i, charge_mode.T)
             else:
@@ -136,13 +131,18 @@ class pile_manager(threading.Thread):
                 i.is_open = False
         pass
     # 查看充电桩报表(所有数据)
-    def check_pile_report(self, id):
-        state = self.pile_pool[id].pile_state()
-        return state
-
+    def check_pile_report(self):
+        list=[]
+        for i in self.pile_pool:
+            list.append(i.pile_state())
+        return list
+    #返回充电桩数量
     def retPipeAmount(self):
-        return [self.pile_num, self.normal_pile, self.fast_pile]
-
+        return [len(self.normal_pile)+len(self.fast_pile), self.normal_pile, self.fast_pile]
+    #设置价格
+    def setPrice(self, low, mid, high):
+        for _pile in self.pile_pool:
+            _pile.set_price(low,mid,high)
     '''
     这里是所有与用户有关的部分
     '''
@@ -155,17 +155,17 @@ class pile_manager(threading.Thread):
             o = order(car_id, request_amount, charge_mode.F)
         try:
             self.waiting_area.append(o)
-            len = -1
+            _len = -1
             if _charge_mode == "T":
                 self.T_list.append(o)
                 o.init_num(len(self.T_list))
-                len = len(self.T_list)
+                _len = len(self.T_list)
             else:
                 self.F_list.append(o)
                 o.init_num(len(self.F_list))
-                len = len(self.F_list)
-            create_time_table(car_id)
-            return [1, _charge_mode, len]
+                _len = len(self.F_list)
+
+            return [1, _charge_mode, _len]
         except Exception as e:
             print(e)
             return [0]
@@ -173,14 +173,16 @@ class pile_manager(threading.Thread):
 
     # 开始充电
     def start_charge(self, car_id):
+        #监测是否在某个_pile队列的最前端
         flag = False
         for _pile in self.pile_pool:
             if (_pile.waiting_list != [] and _pile.waiting_list[0].car_id == car_id):
+                #确实在
                 flag = True
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
-                _pile.waiting_list[0].order_state = order_s.on_charge
+                _pile.waiting_list[0].set_state_on_charge()
                 _pile.working_state = charging_pile_state.in_use
-        creatOrder(car_id,)
+                creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.waiting_list[0].request_mode)
         return flag
     # 轮询查看订单状态
     def look_query(self, car_id):
@@ -190,7 +192,7 @@ class pile_manager(threading.Thread):
                 "car_position": _order.order_state,
                 "car_state": _order.order_state,
                 "queue_num": _order.get_queue_num(),
-                "request_time": time_table[car_id],
+                "request_time": _datetime.datetime.now(),
                 "pile_id": None,
                 "request_mode": _order.request_mode,
                 "request_amount": _order.request_amount
@@ -200,7 +202,7 @@ class pile_manager(threading.Thread):
                 "car_position": _order.order_state,
                 "car_state": _order.order_state,
                 "queue_num": None,
-                "request_time": time_table[car_id],
+                "request_time": _datetime.datetime.now(),
                 "pile_id": x,
                 "request_mode": _order.request_mode,
                 "request_amount": _order.request_amount
@@ -261,11 +263,6 @@ class pile_manager(threading.Thread):
 
 
 
-    def setPrice(self, low, mid, high):
-        self.low_price = low
-        self.mid_price = mid
-        self.high_price = high
-
 
 
 
@@ -273,6 +270,7 @@ class pile_manager(threading.Thread):
     def end_charge(self, car_id):
         flag = False
         # 判断是在充电区还是在等候区
+        #在等候区
         for i in self.waiting_area:
             if i.car_id == car_id:
                 flag = True
@@ -282,12 +280,11 @@ class pile_manager(threading.Thread):
                 else:
                     self.F_list.remove(i)
                 self.waiting_area.remove(i)  # 在所有list中删除他即可
-
+        #在充电区
         for _pile in self.pile_pool:
-            if (_pile.waiting_list != [] and _pile.check_car_id(car_id) != 2): #充电桩中存在waiting
+            if (_pile.waiting_list != [] and _pile.check_car_id(car_id) == 1): #充电桩中存在waiting
                 flag = True
                 _pile.waiting_list[0].order_state = order_s.on_charge
-
         pass
 
     '''
@@ -342,6 +339,7 @@ class pile_manager(threading.Thread):
         self.PRINT()
 
     def PRINT(self):
+        print("======================")
         print("current waiting_area")
         for i in self.waiting_area:
             print(i.car_id,end=";")
@@ -360,7 +358,13 @@ class pile_manager(threading.Thread):
             print(i.request_mode,end=";")
             print(i.order_num)
         print("====")
-
+        print("PRINT_pile")
+        for _pile in self.pile_pool:
+            print(f"_pile={_pile.pile_id}")
+            for i in _pile.waiting_list:
+                print(f"i.car_id={i.car_id}", end=";")
+            print("")
+        print("======================")
 
     def PRINT_pile(self):
         print("PRINT_pile")
