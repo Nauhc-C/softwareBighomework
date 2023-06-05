@@ -161,6 +161,21 @@ class pile_manager(threading.Thread):
             if i.pile_id == id and i.working_state==charging_pile_state.idle:
                 i.working_state=charging_pile_state.close
         pass
+
+
+    #设置充电桩故障/非故障
+    def set_pile_error(self,id):
+        print("set broke")
+        for i in self.pile_pool:
+            if i.pile_id == id:
+                i.set_error()
+        pass
+    def set_pile_not_error(self,id):
+        print("set not broke")
+        for i in self.pile_pool:
+            if i.pile_id == id and i.working_state==charging_pile_state.broke:
+                i.set_not_error()
+        pass
     # 查看充电桩报表(所有数据)
     def check_pile_report(self):
         list=[]
@@ -388,9 +403,7 @@ class pile_manager(threading.Thread):
         #更新所有时刻
         for i in self.pile_pool:
             i.update()
-
-
-
+        self.PRINT()
 
     # 调度充电桩
     def scheldur(self, _charge_mode):
@@ -494,4 +507,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_pile_open_or_close(a)
+    test.test_pile_broke(a)

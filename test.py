@@ -53,3 +53,17 @@ def test_pile_open_or_close(a):
     time.sleep(2)
     a.open_pile(2)
     time.sleep(2)
+
+# 测试充电桩数量的
+def test_pile_num(a):
+    time.sleep(2)
+    print(a.retPipeAmount())
+
+
+
+def test_pile_broke(a):
+    time.sleep(2)
+    a.set_pile_error(2)
+    time.sleep(2)
+    a.set_pile_not_error(2)
+    time.sleep(2)

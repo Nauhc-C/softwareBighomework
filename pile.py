@@ -46,9 +46,20 @@ class pile():
         self.remianing_total=0
         self.waiting_list=LimitedList(2)   #充电区的两个位置(如果需要更改就直接改这里即可)
 
+        self.broke_list=[]
+
         self.low_price = 0.4
         self.mid_price = 0.7
         self.high_price = 1.0
+
+    def set_error(self):
+        self.working_state=charging_pile_state.broke  #设置为损坏状态
+        for i in self.waiting_list:
+            self.broke_list.append(i)  #把目前waiting_list中的全都复制到broke_list中
+        if len(self.waiting_list) > 0:
+            self.over()  # 结束当前订单
+    def set_not_error(self):
+        self.working_state=charging_pile_state.idle
     #返回所有状态
     def pile_state(self):
         info_dict = {
@@ -86,13 +97,6 @@ class pile():
         self.working_state=charging_pile_state.idle
         #然后进入统计
         self.total_charge_num+=1
-
-
-
-
-
-
-
 
         #最后清除这一单
         self.waiting_list.remove(self.waiting_list[0])
