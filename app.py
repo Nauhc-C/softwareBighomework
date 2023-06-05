@@ -85,7 +85,6 @@ class OrderManager:
         db.session.add(Order(car_id, charge_amount, pile_id))
         db.session.commit()
 
-
     def findBillOnly(self, bill_id):
         i = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.pile_id, Order.start_time,
                              Order.end_time, Order.total_fee, Order.pay_state, Order.charge_amount,
@@ -157,7 +156,6 @@ class UserManager:
         return md5Token
 
     def checkToken(self, token):
-        print("token=", token)
         ret = self.tokenList.get(token)
         print(ret)
         if ret is None:
@@ -167,6 +165,7 @@ class UserManager:
     def requestC(self, token, amount, mode):
         info = self.tokenList.get(token)
         ret = pileManager.submit_a_charging_request(info[2], amount, mode)
+        print("ret=", ret)
         if ret[0] == 0:
             return [0]
         info[4] = amount
@@ -175,6 +174,7 @@ class UserManager:
 
     def checkIfUpMax(self, token, amount):
         info = self.tokenList.get(token)
+        amount = float(amount)
         if amount > info[3]:
             return False
         return True
@@ -208,7 +208,8 @@ class UserManager:
     def lookState(self, car_id):
         if not pileManager.if_car_in_charging(car_id):
             return [0]
-        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.start_time, Order.charge_amount).filter_by(bill_id=findBillId(car_id)).first()
+        info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.start_time,
+                                Order.charge_amount).filter_by(bill_id=findBillId(car_id)).first()
         info2 = pileManager.look_charge_state(car_id)
         data = {
             "car_id": car_id,
@@ -225,17 +226,15 @@ class UserManager:
 
         }
 
-
-
-
         return [1, data]
+
+
 pileManager = pile_manager()
 userManager = UserManager()
 orderManager = OrderManager()
 
 
-
-@app.route('/')
+@app.route('/', methods=["OPTIONS"])
 def test():
     userManager.register("123", "123", "ad111", 1000)
     token = userManager.login("123", "123")[1]
@@ -251,7 +250,14 @@ def test():
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
-
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_preflight(path):
+    response = jsonify()
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'PUT, POST, GET, DELETE, OPTIONS'
+    response.headers['Access-Control-Expose-Headers'] = '*'
+    return response
 
 # 此方法处理用户注册
 @app.route('/user/register', methods=['POST'])
@@ -434,23 +440,20 @@ def requestCharge():
     token = request.headers.get("Authorization")
 
     if not userManager.checkToken(token):
-
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    print("okokoko3")
     amount = request.form["request_amount"]
+    amount = float(amount)
     mode = request.form["request_mode"]
-    print("okokoko4")
     if not userManager.checkIfUpMax(token, amount):
         return jsonify({
             "code": 0,
             "message": "请求电量超过车辆总电量."
         })
-    print("okokoko")
+
     info = userManager.requestC(token, amount, mode)
-    print("okokoko2")
     if info[0] == 0:
         return jsonify({
             "code": 0,
@@ -461,12 +464,13 @@ def requestCharge():
         "code": 1,
         "message": "success.",
         "data": {
-            "car_positon": info[1],
+            "car_position": info[1],
             "car_state": "等待区",
-            "queue": str(info[1]),
+            "queue_num": str(info[1]),
             "request_time": _datetime.datetime.now()
         }
     })
+
 
 @app.route("/user/changeChargingAmount", methods=['POST'])
 def changeAmount():
@@ -489,6 +493,7 @@ def changeAmount():
         "code": 0,
         "message": "failed."
     })
+
 
 @app.route("/user/changeChargingMode", methods=['POST'])
 def changeMode():
@@ -532,6 +537,7 @@ def getState():
         "data": info[1],
     })
 
+
 @app.route("/user/queryCarState", methods=["POST"])
 def lookQuery():
     token = request.headers.get("Authorization")
@@ -546,23 +552,36 @@ def lookQuery():
             "code": 1,
             "message": "充电结束",
             "data": {
-                "car_position": "充电结束"
-        }
+                "car_position": None,
+                "car_state": "充电结束",
+                "queue_num": None,
+                "request_time": None,
+                "pile_id": None,
+                "request_mode": None,
+                "request_amount": None
+            }
         })
 
     if (not pileManager.if_car_in_charging(car_id)) and (not pileManager.car_in_wait(car_id)):
         return jsonify({
-            "code": 0,
+            "code": 1,
             "message": "空闲",
             "data": {
-                "car_position": "空闲"
-        }
+                "car_position": None,
+                "car_state": "空闲",
+                "queue_num": None,
+                "request_time": None,
+                "pile_id": None,
+                "request_mode": None,
+                "request_amount": None
+            }
         })
     return jsonify({
         "code": 1,
         "message": "success.",
         "data": pileManager.look_query(car_id)
     })
+
 
 @app.route("/admin/login", methods=["POST"])
 def adminLog():
@@ -597,6 +616,7 @@ def adminLogout():
         "message": "注销成功."
     })
 
+
 @app.route("/admin/powerOn", methods=["POST"])
 def powerOn():
     token = request.headers.get("Authorization")
@@ -612,6 +632,7 @@ def powerOn():
         "message": "success."
     })
 
+
 @app.route("/admin/powerOff", methods=["POST"])
 def powerOff():
     token = request.headers.get("Authorization")
@@ -626,6 +647,7 @@ def powerOff():
         "code": 1,
         "message": "success."
     })
+
 
 @app.route("/admin/queryPileAmount", methods=["POST"])
 def lookPileAmount():
@@ -646,6 +668,7 @@ def lookPileAmount():
         }
     })
 
+
 @app.route("/admin/setPrice", methods=["POST"])
 def setPrice():
     token = request.headers.get("Authorization")
@@ -663,6 +686,7 @@ def setPrice():
         "message": "success."
     })
 
+
 with app.app_context():
     print(_datetime.datetime.now().isoformat())
     db.create_all()
@@ -673,6 +697,6 @@ with app.app_context():
     pileManager.start()
 
 if __name__ == '__main__':
-    cors = CORS(app)
+    cors = CORS(app, resources=r"/*")
 
     app.run(host='0.0.0.0', port=8888)

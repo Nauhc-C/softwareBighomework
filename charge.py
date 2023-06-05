@@ -45,6 +45,7 @@ class Order(Base):
         car_table[car_id] = self.bill_id
 
 car_table = {}
+time_table = {}
 
 # 给SLC用的
 def creatOrder(car_id, charge_amount, pile_id):
@@ -61,7 +62,8 @@ def findBillId(car_id):
 全局变量
 '''
 
-
+def create_time_table(car_id):
+    time_table[car_id] = _datetime.datetime.now()
 
 
 # 限制最多元素个数的list, 重写list
@@ -83,9 +85,14 @@ class LimitedList(list):
 class pile_manager(threading.Thread):
     def __init__(self, pile_num=5):
         super().__init__()
+        self.pile_num = pile_num
         # 把这两个填上， 数组里面为充电桩编号 int
         self.normal_pile = [0,1]
         self.fast_pile = [2,3,4]
+        # 计费的价钱 谷时 平时 峰时
+        self.low_price = 0
+        self.mid_price = 0
+        self.high_price = 0
         self.pile_pool = []
 
 
@@ -164,7 +171,7 @@ class pile_manager(threading.Thread):
                 self.F_list.append(o)
                 o.init_num(len(self.F_list))
                 _len = len(self.F_list)
-
+            create_time_table(car_id)
             return [1, _charge_mode, _len]
         except Exception as e:
             print(e)
@@ -192,7 +199,7 @@ class pile_manager(threading.Thread):
                 "car_position": _order.order_state,
                 "car_state": _order.order_state,
                 "queue_num": _order.get_queue_num(),
-                "request_time": _datetime.datetime.now(),
+                "request_time": time_table[car_id],
                 "pile_id": None,
                 "request_mode": _order.request_mode,
                 "request_amount": _order.request_amount
@@ -202,7 +209,7 @@ class pile_manager(threading.Thread):
                 "car_position": _order.order_state,
                 "car_state": _order.order_state,
                 "queue_num": None,
-                "request_time": _datetime.datetime.now(),
+                "request_time": time_table[car_id],
                 "pile_id": x,
                 "request_mode": _order.request_mode,
                 "request_amount": _order.request_amount
@@ -262,6 +269,11 @@ class pile_manager(threading.Thread):
         return False
 
 
+
+    def setPrice(self, low, mid, high):
+        self.low_price = low
+        self.mid_price = mid
+        self.high_price = high
 
 
 
