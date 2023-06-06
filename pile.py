@@ -193,7 +193,7 @@ class pile():
 
         return {
             "total_charge_num":total_charge_num,              #累计充电次数
-            "total_charge_time": total_charge_time ,           #累计充电时长(小时)
+            "total_charge_time": total_charge_time / 3600,           #累计充电时长(小时)
             "total_capacity":  total_capacity ,             #累计充电电量
             "total_charge_fee":   total_charge_fee   ,        #充电费
             "total_service_fee":   total_service_fee  ,        #服务费

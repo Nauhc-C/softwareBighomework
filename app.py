@@ -848,6 +848,32 @@ def look_report():
     pile_id = int(pile_id)
     start = request.form["start_date"]
     end = request.form["end_date"]
+    if (start == "null" or end == "null"):
+        return jsonify({
+            "code": 1,
+            "message": "没有日期."
+        })
+    start1 = _datetime.datetime.strptime(start, "%Y-%m-%d")
+    end1 = _datetime.datetime.strptime(end, "%Y-%m-%d")
+
+
+    start = (start1 - myTime.getInitData()).total_seconds()
+    end = (end1 - myTime.getInitData()).total_seconds()
+    if start < 0:
+        start = 0
+    if end > (myTime.getDataTime() - myTime.getInitData()).total_seconds():
+        end = (myTime.getDataTime() - myTime.getInitData()).total_seconds()
+    start = int(start)
+    end = int(end)
+    info = pileManager.queryReport(pile_id, start, end)
+    info["start_date"] = start1
+    info["end_date"] = end1
+    return jsonify({
+        "code": 1,
+        "message": "bullet shit is here hhhh.",
+        "data": info
+
+    })
 
 @app.route("/getTime", methods=["POST"])
 def geTime():

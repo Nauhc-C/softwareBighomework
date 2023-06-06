@@ -37,6 +37,7 @@ class MyTime(threading.Thread):
     def __init__(self):
         super().__init__()
         self.mydate = _datetime.datetime(2023, 6, 5, 7, 50, 00, 00)
+        self.initdate = self.mydate
 
     def run(self):
         while True:
@@ -49,6 +50,8 @@ class MyTime(threading.Thread):
     def getDataTime(self):
         return self.mydate
 
+    def getInitData(self):
+        return self.initdate
 
 myTime = MyTime()
 myTime.start()
@@ -138,7 +141,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def run(self):
         while True:
             self.update()
-            time.sleep(0.5)
+            time.sleep(0.05)
             self.timer+=1
 
     '''
@@ -422,7 +425,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def update(self):
         # 在当前order中有的时候触发调度
         Tflag,Fflag = self.is_waiting_list_available()
-        print(f"update: T={Tflag},F={Fflag}")
+     #   print(f"update: T={Tflag},F={Fflag}")
         # T类充电桩有空
         if Tflag == True:
             self.scheldur(charge_mode.T)
@@ -431,7 +434,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
         #更新所有时刻
         for i in self.pile_pool:
             i.update()
-        self.PRINT()
+    #    self.PRINT()
 
 
     def get_broke_list(self):
@@ -502,7 +505,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
                 i.update_num()
 
     def scheldur_F(self):
-        print("F类调度")
+   #     print("F类调度")
         flag=False
         if (self.error_list_F != []):   #调度error_F里的 , 并且不动别处的
             self.error_list_F[0].order_state == order_s.wait_queue
@@ -743,7 +746,7 @@ class pile():
         service_cost=0
         #只有运行中的需要更新
         if self.working_state==charging_pile_state.in_use:
-            print(f"pile:{self.pile_id}is use")
+      #      print(f"pile:{self.pile_id}is use")
             self.total_charge_time+=1
             self.waiting_list[0].charge_time+=1
             if(self.charge_mode==charge_mode.T):
@@ -815,7 +818,7 @@ class pile():
     def get_current_price(self):
         import datetime
 
-        now = datetime.datetime.now()  # 获取当前时间
+        now = myTime.getDataTime()  # 获取当前时间
         if 7 <= now.hour < 10:
             return self.mid_price
         elif 10 <= now.hour < 15:
