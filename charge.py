@@ -740,12 +740,14 @@ class pile():
         return info_dict
 
     def update(self):
+        __time=0
         over=0
         amount=0
         charge_cost=0
         service_cost=0
         #只有运行中的需要更新
         if self.working_state==charging_pile_state.in_use:
+            __time=1
       #      print(f"pile:{self.pile_id}is use")
             self.total_charge_time+=1
             self.waiting_list[0].charge_time+=1
@@ -770,7 +772,7 @@ class pile():
                 self.over()
                 over=1
         #每帧更新
-        self.history_list.append([over,1,amount,charge_cost,service_cost,charge_cost+service_cost])
+        self.history_list.append([over,__time,amount,charge_cost,service_cost,charge_cost+service_cost])
 
 
     def over(self):
@@ -862,7 +864,6 @@ class pile():
             "start_date":    start  ,              #开始时间
             "end_date":   end                   #结束时间
         }
-
 
 
 
