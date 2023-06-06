@@ -198,7 +198,7 @@ class UserManager:
 
         if count == 0:
             return False
-        print("FOUR:", car_id, car_cap)
+
         a = car_cap
         db.session.query(User).filter_by(car_id=car_id).first().car_capacity = a
         db.session.commit()
@@ -210,9 +210,7 @@ class UserManager:
         list = []
         info1 = db.session.query(User.id, User.user_name, User.car_id, User.car_capacity).all()
         for value in info1:
-            print(value[2])
-            print(pileManager.if_car_in_charging(value[2]))
-            print(pileManager.car_in_wait(value[2]))
+
             if (not pileManager.if_car_in_charging(value[2])) and (not pileManager.car_in_wait(value[2])):
                 continue
             info = pileManager.look_query(value[2])
@@ -240,7 +238,7 @@ class UserManager:
         return pileManager.modify_the_amount_of_charge(car_id, amount)
 
     def lookState(self, car_id):
-        print("@asdasfasfasfd")
+
         if not pileManager.if_car_in_charging(car_id):
             return [0]
 
@@ -271,17 +269,6 @@ orderManager = OrderManager()
 
 @app.route('/', methods=["OPTIONS"])
 def test():
-    userManager.register("123", "123", "ad111", 1000)
-    token = userManager.login("123", "123")[1]
-    print(userManager.checkToken(token))
-    db.session.add(Order("ADX100", 23, 1))
-    db.session.commit()
-    print(orderManager.findBillAll("ADX100", myTime.getData()))
-    print(db.session.query(User).filter_by(user_name="1").all())
-    print(db.session.query(Order.pay_state).filter_by(car_id="ADX100").first())
-    Order.query.filter_by(car_id="ADX100").update({"pay_state": 1})
-    db.session.commit()
-    print(db.session.query(Order.pay_state).filter_by(car_id="ADX100").first())
     pass
     # 此处可以展示网页
     # return render_template('index1.html')
@@ -336,7 +323,7 @@ def getTotalBill():
         pass
     else:
         bill_data = _datetime.datetime.strptime(bill_data, '%Y-%m-%d')
-        print(bill_data)
+
         bill_data = bill_data.date()
     info = orderManager.findBillAll(car_id, bill_data)
     if info[0] == 0:
@@ -593,7 +580,7 @@ def getState():
             "code": 0,
             "message": "充电已结束."
         })
-    print(info[1])
+
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -654,10 +641,12 @@ def lookQuery():
                 "request_amount": None
             }
         })
+    aaa = pileManager.look_query(car_id)
+    print(aaa)
     return jsonify({
         "code": 1,
         "message": "success.",
-        "data": pileManager.look_query(car_id)
+        "data": aaa
     })
 
 @app.route("/user/beginCharging", methods=["POST"])
@@ -815,7 +804,7 @@ def lookQueueC():
             "message": "用户未登录."
         })
     info = userManager.findAllCarState()
-    print(info)
+
     return jsonify({
         "code": 1,
         "message": "success.",
