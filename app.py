@@ -8,6 +8,8 @@ from flask_sqlalchemy import SQLAlchemy
 import _datetime
 from charge import pile_manager, findBillId, myTime, MyTime, time_table
 from flask_cors import CORS
+from fuckingbulletshitclass import *
+import asyncio
 
 from pydantic import BaseModel
 
@@ -285,11 +287,11 @@ def handle_preflight(path):
 
 # 此方法处理用户注册
 @app.route('/user/register', methods=['POST'])
-def register():
-    usernamePost = request.form['user_name']
-    passwordPost = request.form['password']
-    car_id = request.form['car_id']
-    car_cap = request.form["car_capacity"]
+async def register(a: user_REGISTER):
+    usernamePost = a.user_name
+    passwordPost = a.password
+    car_id = a.car_id
+    car_cap = a.car_capacity
     userCheckCount = userManager.register(usernamePost, passwordPost, car_id, car_cap)
 
     if userCheckCount[0] <= 0:
@@ -312,9 +314,10 @@ def register():
 
 
 @app.route("/user/getTotalBill", methods=["POST"])
-def getTotalBill():
-    car_id = request.form["car_id"]
-    bill_data = request.form["bill_date"]
+async def getTotalBill(a: user_GETTOTALBILL):
+
+    car_id = a.car_id
+    bill_data = a.bill_date
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -344,14 +347,14 @@ def getTotalBill():
 
 @app.route("/user/getDetailBill", methods=["POST"])
 # 乌鱼子 为什么要有这个函数，合并到上一个不行吗
-def getOnlyBill():
+async def getOnlyBill(a: user_GETDETAILBILL):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "useless token."
         })
-    bill_id = request.form["bill_id"]
+    bill_id = a.bill_id
     i = orderManager.findBillOnly(bill_id)
     if i[0] == 0:
         return jsonify({
@@ -380,10 +383,10 @@ def getOnlyBill():
 
 
 # 此方法处理用户登录
-@app.route('/user/login', methods=['POST'])
-def log():
-    usernamePost = request.form['user_name']
-    passwordPost = request.form['password']
+@app.post('/user/login')
+async def log(user: user_LOGIN):
+    usernamePost = user.user_name
+    passwordPost = user.password
     userCheckCount = userManager.login(usernamePost, passwordPost)
     if userCheckCount[0] > 0:
         return jsonify({
@@ -405,7 +408,7 @@ def log():
 
 
 @app.route("/user/logout", methods=["POST"])
-def logout():
+async def logout(a: user_LOGOUT):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -420,14 +423,14 @@ def logout():
 
 
 @app.route("/user/getPayBill", methods=["POST"])
-def pay():
+async def pay(a: user_GETPAYBILL):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    bill_id = request.form["bill_id"]
+    bill_id = a.bill_id
 
     if orderManager.payBill(bill_id):
         return jsonify({
@@ -442,15 +445,15 @@ def pay():
 
 
 @app.route("/user/changeCapacity", methods=["POST"])
-def changeCapacity():
+async def changeCapacity(a: user_CHANGECAPACITY):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    car_id = request.form["car_id"]
-    car_cap = request.form["car_capacity"]
+    car_id = a.car_id
+    car_cap = a.car_capacity
     car_cap = float(car_cap)
     if userManager.modifyCar(token, car_id, car_cap):
         return jsonify({
@@ -468,7 +471,7 @@ def changeCapacity():
 
 
 @app.route("/user/chargingRequest", methods=['POST'])
-def requestCharge():
+async def requestCharge(a: user_CHARGINGREQUEST):
     token = request.headers.get("Authorization")
 
     if not userManager.checkToken(token):
@@ -476,9 +479,9 @@ def requestCharge():
             "code": 0,
             "message": "用户未登录."
         })
-    amount = request.form["request_amount"]
+    amount = a.request_amount
     amount = float(amount)
-    mode = request.form["request_mode"]
+    mode = a.request_mode
     if not userManager.checkIfUpMax(token, amount):
         return jsonify({
             "code": 0,
@@ -504,14 +507,14 @@ def requestCharge():
     })
 
 @app.route("/user/getChargingState", methods=["POST"])
-def lookCharge():
+async def lookCharge(a: user_GETCHARGINGSTATE):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    car_id = request.form["car_id"]
+    car_id = a.car_id
     info = userManager.lookState(car_id)
     if info[0] == 0:
         return jsonify({
@@ -525,15 +528,15 @@ def lookCharge():
     })
 
 @app.route("/user/changeChargingAmount", methods=['POST'])
-def changeAmount():
+async def changeAmount(a: user_CHANGECHARGINGAMOUNT):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    amount = request.form["request_amount"]
-    car_id = request.form["car_id"]
+    amount = a.request_amount
+    car_id = a.car_id
     amount = float(amount)
     if userManager.modifyAmount(car_id, amount):
         return jsonify({
@@ -547,15 +550,15 @@ def changeAmount():
 
 
 @app.route("/user/changeChargingMode", methods=['POST'])
-def changeMode():
+async def changeMode(a: user_CHANGECHARGINGMODE):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    mode = request.form["request_mode"]
-    car_id = request.form["car_id"]
+    mode = a.request_mode
+    car_id = a.car_id
     if userManager.modifyMode(car_id, mode):
         return jsonify({
             "code": 1,
@@ -568,14 +571,14 @@ def changeMode():
 
 
 @app.route("/user/getChargingState", methods=["POST"])
-def getState():
+async def getState(a: user_GETCHARGINGSTATE):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    car_id = request.form["car_id"]
+    car_id = a.car_id
     info = userManager.lookState(car_id)
     if info[0] == 0:
         return jsonify({
@@ -590,14 +593,14 @@ def getState():
     })
 
 @app.route("/user/endCharging", methods=["POST"])
-def endCharge():
+async def endCharge(a: user_ENDCHARGING):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    car_id = request.form["car_id"]
+    car_id = a.car_id
     pileManager.end_charge(car_id)
     return jsonify({
         "code": 1,
@@ -605,14 +608,14 @@ def endCharge():
     })
 
 @app.route("/user/queryCarState", methods=["POST"])
-def lookQuery():
+async def lookQuery(a: user_QUERYCARSTATE):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    car_id = request.form["car_id"]
+    car_id = a.car_id
     if (not pileManager.if_car_in_charging(car_id)) and (not pileManager.car_in_wait(car_id)):
         if orderManager.if_no_pay(car_id):
             return jsonify({
@@ -644,7 +647,6 @@ def lookQuery():
             }
         })
     aaa = pileManager.look_query(car_id)
-    print(aaa)
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -652,14 +654,14 @@ def lookQuery():
     })
 
 @app.route("/user/beginCharging", methods=["POST"])
-def beginCharge():
+async def beginCharge(a: user_BEGINCHARGING):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    car_id = request.form["car_id"]
+    car_id = a.car_id
     if pileManager.start_charge(car_id):
         return jsonify({
             "code": 1,
@@ -671,8 +673,8 @@ def beginCharge():
             "message": "无法."
         })
 @app.route("/admin/login", methods=["POST"])
-def adminLog():
-    password = request.form["password"]
+async def adminLog(a: admin_LOGIN):
+    password = a.password
     info = userManager.login("admin", password)
     if info[0] > 0:
         return jsonify({
@@ -689,7 +691,7 @@ def adminLog():
 
 
 @app.route("/admin/logout", methods=["POST"])
-def adminLogout():
+async def adminLogout():
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -704,14 +706,14 @@ def adminLogout():
 
 
 @app.route("/admin/powerOn", methods=["POST"])
-def powerOn():
+async def powerOn(a: admin_POWERON):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    id = request.form["pile_id"]
+    id = a.pile_id
     id = int(id)
     pileManager.open_pile(id)
     return jsonify({
@@ -721,14 +723,14 @@ def powerOn():
 
 
 @app.route("/admin/powerOff", methods=["POST"])
-def powerOff():
+async def powerOff(a: admin_POWEROFF):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    id = request.form["pile_id"]
+    id = a.pile_id
     id = int(id)
     pileManager.close_pile(id)
     return jsonify({
@@ -738,7 +740,7 @@ def powerOff():
 
 
 @app.route("/admin/queryPileAmount", methods=["POST"])
-def lookPileAmount():
+async def lookPileAmount():
     token = request.headers.get("Authorization")
     amount = pileManager.retPipeAmount()
     if not userManager.checkToken(token):
@@ -762,19 +764,19 @@ def lookPileAmount():
 
 
 @app.route("/admin/setPrice", methods=["POST"])
-def setPrice():
+async def setPrice(a: admin_SETPRICE):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    low = request.form["low_price"]
-    mid = request.form["mid_price"]
-    high = request.form["high_price"]
-    low = int(low)
-    mid = int(mid)
-    high = int(high)
+    low = a.low_price
+    mid = a.mid_price
+    high = a.high_price
+    low = float(low)
+    mid = float(mid)
+    high = float(high)
     pileManager.setPrice(low, mid, high)
     return jsonify({
         "code": 1,
@@ -782,14 +784,14 @@ def setPrice():
     })
 
 @app.route("/admin/powerCrash", methods=["POST"])
-def setCrash():
+async def setCrash(a: admin_POWERCRASH):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    pile_id = request.form["pile_id"]
+    pile_id = a.pile_id
     pile_id = int(pile_id)
     pileManager.set_pile_error(pile_id)
     return jsonify({
@@ -798,7 +800,7 @@ def setCrash():
     })
 
 @app.route("/admin/queryQueueState", methods=["POST"])
-def lookQueueC():
+async def lookQueueC():
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -816,14 +818,14 @@ def lookQueueC():
     })
 
 @app.route("/admin/queryPileState", methods=["POST"])
-def lookQueryPile():
+async def lookQueryPile(a: admin_QUERYPILESTATE):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    pile_id = request.form["pile_id"]
+    pile_id = a.pile_id
     pile_id = int(pile_id)
     info = pileManager.check_pile_report()[pile_id]
     return jsonify({
@@ -839,14 +841,14 @@ def lookQueryPile():
     })
 
 @app.route("/admin/queryReport", methods=["POST"])
-def look_report():
+async def look_report(a: admin_QUERYREPORT):
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
             "code": 0,
             "message": "用户未登录."
         })
-    pile_id = request.form["pile_id"]
+    pile_id = a.pile_id
     pile_id = int(pile_id)
     start = request.form["start_date"]
     end = request.form["end_date"]
@@ -878,7 +880,7 @@ def look_report():
     })
 
 @app.route("/getTime", methods=["POST"])
-def geTime():
+async def geTime():
     return jsonify({
         "code": 1,
         "data": {
