@@ -118,7 +118,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
         self.pile_pool = []
 
         self.strategy="a"    #a,b,c分别代表一种调度策略
-
+        self.timer=0
         #以下是等候区
         self.F_list = []
         self.T_list = []
@@ -139,6 +139,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
         while True:
             self.update()
             time.sleep(1)
+            self.timer+=1
 
     '''
     这里是所有与管理员有关的部分
@@ -178,7 +179,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def queryReport(self,id,start_time,end_time):
         for _pile in self.pile_pool:
             if _pile.pile_id == id:
-                return _pile.queryReport()
+                return _pile.queryReport(start_time,end_time)
 
 
 
@@ -348,9 +349,10 @@ class pile_manager(threading.Thread,pile_utils.utils):
 
     # 取消/结束充电
     def end_charge(self, car_id):
-        #print(f"charge--end_charge")
+
         flag = False
-        _order,_ = self.from_carid_to_everything(car_id)
+        _order,log = self.from_carid_to_everything(car_id)
+        print(f"charge--end_charge car_id={car_id},log={log}")
         # 判断是在充电区还是在等候区
         #在等候区
         for i in self.waiting_area:
@@ -366,16 +368,17 @@ class pile_manager(threading.Thread,pile_utils.utils):
         for _pile in self.pile_pool:
             if (_pile.waiting_list != [] and _pile.check_car_id(car_id) == 0): #充电桩中存在waiting且当前car_id在第一位
                 flag = True
-                #print(f"charge--end_charge 定位到充电桩{_pile.pile_id}")
-                if _pile.waiting_list[0].order_state == order_s.on_charge:#正在充电则结束充电
-                    #print(f"charge--end_charge on charge")
+                print(f"charge--end_charge 定位到充电桩{_pile.pile_id}")
+                print(f"charge--end charge 当前订单状态{_order.order_state}  :  {_pile.waiting_list[0].order_state}")
+                if _order.order_state.value == 3:#正在充电则结束充电
+                    print(f"charge--end_charge on charge")
                     _pile.over()
-                elif  _pile.waiting_list[0].order_state == order_s.able_to_charge: #还没充电就消除这一单然后去排队
+                elif  _pile.waiting_list[0].order_state.value == 2: #还没充电就消除这一单
+                    print("charge--end_charge able to charge")
                     _pile.waiting_list.remove(_order)
-                    #print(f"charge--end_charge car_id={car_id}  "
-                    #      f"_order.request_amount={_order.request_amount}   "
-                    #      f"_order.request_mode={_order.request_mode}")
-                    #self.requeue(car_id,_order.request_amount,_order.request_mode,'pile')
+                else:
+                    print("charge--end_charge error")
+
 
 
         pass
@@ -406,10 +409,10 @@ class pile_manager(threading.Thread,pile_utils.utils):
         Tflag = False
         # print("可以开始调度")
         for i in self.pile_pool:
-            if i.charge_mode == charge_mode.T and i.check_waiting_list_available() and i.working_state==charging_pile_state.idle:
+            if i.charge_mode == charge_mode.T and i.check_waiting_list_available() and (i.working_state==charging_pile_state.idle or i.working_state==charging_pile_state.in_use):
                 # print("   #T队列中有空")
                 Tflag = True
-            if i.charge_mode == charge_mode.F and i.check_waiting_list_available() and i.working_state==charging_pile_state.idle:
+            if i.charge_mode == charge_mode.F and i.check_waiting_list_available() and (i.working_state==charging_pile_state.idle or i.working_state==charging_pile_state.in_use):
                 ##print("   #F队列中有空")
                 Fflag = True  # F队列中有空
         return Tflag,Fflag
@@ -591,6 +594,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
 
     def PRINT(self):
         print("======================")
+        print(f"current time={self.timer}")
         print("current waiting_area")
         for i in self.waiting_area:
             print(i.car_id,end=";")
@@ -843,4 +847,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_big(a)
+    test.test_last_year(a)
