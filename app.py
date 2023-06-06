@@ -9,6 +9,8 @@ import _datetime
 from charge import pile_manager, findBillId, myTime, MyTime, time_table
 from flask_cors import CORS
 
+from pydantic import BaseModel
+
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
