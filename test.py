@@ -42,7 +42,6 @@ def test_cancel(a):
     a.end_charge("A")
     a.start_charge("A")
     time.sleep(3)
-
     time.sleep(10)
 
 def test_pile_open_or_close(a):
@@ -140,3 +139,13 @@ def test_last_year(a):
 
     a.start_charge("V13")
     a.submit_a_charging_request("V14",95,"F")
+
+def test_if_car_in_charging(a):
+    a.submit_a_charging_request("123123", 16, "T")
+    time.sleep(3)
+    print("test")
+    a.start_charge("123123")
+    time.sleep(3)
+    print("test")
+    print(a.if_car_in_charging("123123"))
+    time.sleep(10)

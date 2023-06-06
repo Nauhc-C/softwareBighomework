@@ -336,12 +336,12 @@ class pile_manager(threading.Thread,pile_utils.utils):
 
     def if_car_in_charging(self, car_id):
         a, _ = self.from_carid_to_everything(car_id)
-        if a!=None and a.order_state == order_s.on_charge:
+        if a!=None and a.order_state.value == 3:
             return True
         return False
     def car_in_wait(self, car_id):
         a,_ = self.from_carid_to_everything(car_id)
-        if a!=None and a.order_state != order_s.on_charge:
+        if a!=None and a.order_state.value != 3:
             return True
         return False
 
@@ -856,4 +856,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_last_year(a)
+    test.test_if_car_in_charging(a)
