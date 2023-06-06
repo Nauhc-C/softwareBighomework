@@ -191,15 +191,16 @@ class UserManager:
         self.tokenList.pop(token)
 
     def modifyCar(self, token, car_id, car_cap):
-        if not self.checkIfUpMax(token, car_cap):
-            return False
         userInfo = self.tokenList.get(token)
         if pileManager.if_car_in_charging(car_id):
             return False
         count = db.session.query(User).filter_by(car_id=car_id).count()  # 在数据库内找是否已经注册
+
         if count == 0:
             return False
-        User.query.filter_by(car_id=car_id).update({"car_capacity": car_cap})
+        print("FOUR:", car_id, car_cap)
+        a = car_cap
+        db.session.query(User).filter_by(car_id=car_id).first().car_capacity = a
         db.session.commit()
         userInfo[3] = car_cap
 
@@ -461,6 +462,7 @@ def changeCapacity():
         })
     car_id = request.form["car_id"]
     car_cap = request.form["car_capacity"]
+    car_cap = float(car_cap)
     if userManager.modifyCar(token, car_id, car_cap):
         return jsonify({
             "code": 1,
@@ -543,7 +545,7 @@ def changeAmount():
         })
     amount = request.form["request_amount"]
     car_id = request.form["car_id"]
-    amount = int(amount)
+    amount = float(amount)
     if userManager.modifyAmount(car_id, amount):
         return jsonify({
             "code": 1,
