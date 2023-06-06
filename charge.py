@@ -89,7 +89,7 @@ def creatOrder(car_id, charge_amount, pile_id):
     session.commit()
 # 需要提供充电时长，服务费，充电费，总费用
 def finishOrder(car_id, service_fee, total_fee, charge_fee, charge_duration):
-    session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": total_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": myTime.getDataTime()})
+    session.query(Order).filter_by(bill_id=car_table.get(car_id)).update({"total_fee": service_fee + charge_fee, "total_service_fee": service_fee, "total_charge_fee": charge_fee, "charge_duration": charge_duration, "end_time": myTime.getDataTime()})
     session.commit()
 def findBillId(car_id):
     return car_table[car_id]
@@ -764,7 +764,7 @@ class pile():
         self.total_charge_num+=1
 
 
-
+        print()
         #发送结束订单
         finishOrder(self.waiting_list[0].car_id,
                     self.waiting_list[0].service_cost,

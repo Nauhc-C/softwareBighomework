@@ -191,6 +191,8 @@ class UserManager:
         self.tokenList.pop(token)
 
     def modifyCar(self, token, car_id, car_cap):
+        if not self.checkIfUpMax(token, car_cap):
+            return False
         userInfo = self.tokenList.get(token)
         if pileManager.if_car_in_charging(car_id):
             return False
@@ -237,8 +239,10 @@ class UserManager:
         return pileManager.modify_the_amount_of_charge(car_id, amount)
 
     def lookState(self, car_id):
+        print("@asdasfasfasfd")
         if not pileManager.if_car_in_charging(car_id):
             return [0]
+
         info = db.session.query(Order.car_id, Order.bill_date, Order.bill_id, Order.start_time,
                                 Order.charge_amount).filter_by(bill_id=findBillId(car_id)).first()
         info2 = pileManager.view_billing(car_id)
@@ -587,6 +591,7 @@ def getState():
             "code": 0,
             "message": "充电已结束."
         })
+    print(info[1])
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -714,6 +719,7 @@ def powerOn():
             "message": "用户未登录."
         })
     id = request.form["pile_id"]
+    id = int(id)
     pileManager.open_pile(id)
     return jsonify({
         "code": 1,
@@ -730,6 +736,7 @@ def powerOff():
             "message": "用户未登录."
         })
     id = request.form["pile_id"]
+    id = int(id)
     pileManager.close_pile(id)
     return jsonify({
         "code": 1,
@@ -790,6 +797,7 @@ def setCrash():
             "message": "用户未登录."
         })
     pile_id = request.form["pile_id"]
+    pile_id = int(pile_id)
     pileManager.set_pile_error(pile_id)
     return jsonify({
         "code": 1,
@@ -836,6 +844,29 @@ def lookQueryPile():
             "charge_mode": info["charge_mode"]
         }
     })
+
+@app.route("/admin/queryReport", methods=["POST"])
+def look_report():
+    token = request.headers.get("Authorization")
+    if not userManager.checkToken(token):
+        return jsonify({
+            "code": 0,
+            "message": "用户未登录."
+        })
+    pile_id = request.form["pile_id"]
+    pile_id = int(pile_id)
+    start = request.form["start_date"]
+    end = request.form["end_date"]
+
+@app.route("/getTime", methods=["POST"])
+def geTime():
+    return jsonify({
+        "code": 1,
+        "data": {
+            "time": myTime.getDataTime()
+        }
+    })
+
 
 with app.app_context():
     db.create_all()
