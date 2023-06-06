@@ -452,9 +452,10 @@ class pile_manager(threading.Thread,pile_utils.utils):
                 for i in _pile.broke_list:
                     if i.request_mode == charge_mode.T:
                         self.error_list_T.append(i)
+                        _pile.broke_list.remove(i)
                     else:
                         self.error_list_F.append(i)
-
+                        _pile.broke_list.remove(i)
     #将所有的重新排队
     def requeue_broke(self):
         for _pile in self.pile_pool:
@@ -614,6 +615,18 @@ class pile_manager(threading.Thread,pile_utils.utils):
         print("====")
         print("current F_list")
         for i in self.F_list:
+            print(i.car_id,end=";")
+            print(i.request_mode,end=";")
+            print(i.order_num)
+        print("====")
+        print("current error_list_T")
+        for i in self.error_list_T:
+            print(i.car_id,end=";")
+            print(i.request_mode,end=";")
+            print(i.order_num)
+        print("====")
+        print("current error_list_F")
+        for i in self.error_list_F:
             print(i.car_id,end=";")
             print(i.request_mode,end=";")
             print(i.order_num)
@@ -856,4 +869,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_if_car_in_charging(a)
+    test.test_broke_car_start(a)

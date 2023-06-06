@@ -149,3 +149,12 @@ def test_if_car_in_charging(a):
     print("test")
     print(a.if_car_in_charging("123123"))
     time.sleep(10)
+
+def test_broke_car_start(a):
+    a.submit_a_charging_request("qww2",16,"T")
+    time.sleep(3)
+    a.start_charge("qww2")
+    time.sleep(1)
+    a.set_pile_error(2)
+    time.sleep(1)
+    print(a.look_query("qww2"))
