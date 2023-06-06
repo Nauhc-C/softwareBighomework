@@ -79,3 +79,14 @@ def test_mofity_fee(a):
     a.setPrice(1000000,2000000,3000000)
     time.sleep(3)
     print(a.view_billing("A"))
+
+def test_big(a):
+    time.sleep(1)
+    a.submit_a_charging_request("A", 0.0016, "T")
+    time.sleep(0.02)
+    a.submit_a_charging_request("123", 0.0016, "T")
+    time.sleep(3)
+    a.start_charge("A")
+    a.start_charge("123")
+    time.sleep(3)
+    time.sleep(2)

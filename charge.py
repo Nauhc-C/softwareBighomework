@@ -104,7 +104,7 @@ def create_time_table(car_id):
 # 充电桩管理的类, 隔绝订单和充电桩的交互,
 # 但是和前端无关(比如用户和管理员的查看充电桩状态在这里都是一个函数, 由其他人来区分
 
-class pile_manager(threading.Thread):
+class pile_manager(threading.Thread,pile_utils.utils):
     def __init__(self, pile_num=5):
         super().__init__()
         self.pile_num = pile_num
@@ -383,11 +383,43 @@ class pile_manager(threading.Thread):
     '''
     其他自己用的函数
     '''
+    #传入car_id, 返回他的订单和所在位置
+    #如果在等候区返回对应的请求id, 如果在充电桩就返回对应的充电桩id
+    def from_carid_to_everything(self,car_id):
+        for i in self.T_list:
+            if i.car_id==car_id:
+                return i,"T"
+        for i in self.F_list:
+            if i.car_id==car_id:
+                return i,"F"
+        for _pile in self.pile_pool:
+            for j in _pile.waiting_list:
+                if j.car_id == car_id:
+                    return j,str(_pile.pile_id)
+        return None,None
+
+
+    #查询waiting_list是否有空位
+    #返回值的第一个是, T类有空闲, 第二个是F类有空
+    def is_waiting_list_available(self):
+        Fflag = False
+        Tflag = False
+        # print("可以开始调度")
+        for i in self.pile_pool:
+            if i.charge_mode == charge_mode.T and i.check_waiting_list_available() and i.working_state==charging_pile_state.idle:
+                # print("   #T队列中有空")
+                Tflag = True
+            if i.charge_mode == charge_mode.F and i.check_waiting_list_available() and i.working_state==charging_pile_state.idle:
+                ##print("   #F队列中有空")
+                Fflag = True  # F队列中有空
+        return Tflag,Fflag
+
 
     ### 每次更新的内容
     def update(self):
         # 在当前order中有的时候触发调度
         Tflag,Fflag = self.is_waiting_list_available()
+        print(f"update: T={Tflag},F={Fflag}")
         # T类充电桩有空
         if Tflag == True:
             self.scheldur(charge_mode.T)
@@ -428,43 +460,75 @@ class pile_manager(threading.Thread):
                     self.requeue(i.car_id,i.request_amount,i.request_mode)  #重新排队
 
     def scheldur_T(self):
+        flag=False
         if (self.error_list_T != []):   #调度error_T里的
+            print("T类调度-error")
             self.error_list_T[0].order_state == order_s.wait_queue
             # 添加到充电桩的waiting_list中
             for _pile in self.pile_pool:
-                if _pile.charge_mode == charge_mode.T and _pile.check_waiting_list_available():
+                #优先寻找第一个位置有位置的
+                if _pile.charge_mode == charge_mode.T and len(_pile.waiting_list)==0:
                     _pile.append_waiting_list(self.error_list_T[0])
+                    flag=True
                     break
+            if(not flag):
+                for _pile in self.pile_pool:
+                    if _pile.charge_mode == charge_mode.T and _pile.check_waiting_list_available():
+                        _pile.append_waiting_list(self.error_list_T[0])
+                        break
             self.error_list_T.remove(self.error_list_T[0])  # 在error_T中删除
         elif (self.T_list != []):
+            print(f"T类调度-normal,T_list={self.T_list}")
             self.waiting_area.remove(self.T_list[0])  # 在等候区删除
             self.T_list[0].order_state == order_s.wait_queue
             # 添加到充电桩的waiting_list中
             for _pile in self.pile_pool:
-                if _pile.charge_mode == charge_mode.T and _pile.check_waiting_list_available():
+                #优先寻找第一个位置有位置的
+                if _pile.charge_mode == charge_mode.T and len(_pile.waiting_list)==0:
                     _pile.append_waiting_list(self.T_list[0])
+                    flag=True
                     break
+            if(not flag):
+                for _pile in self.pile_pool:
+                    if _pile.charge_mode == charge_mode.T and _pile.check_waiting_list_available():
+                        _pile.append_waiting_list(self.T_list[0])
+                        break
             self.T_list.remove(self.T_list[0])  # 在T_list中删除
             for i in self.T_list:  # 更新其他所有T_list中的id
                 i.update_num()
 
     def scheldur_F(self):
+        flag=False
         if (self.error_list_F != []):   #调度error_F里的 , 并且不动别处的
             self.error_list_F[0].order_state == order_s.wait_queue
             # 添加到充电桩的waiting_list中
             for _pile in self.pile_pool:
-                if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available():
-                    _pile.append_waiting_list(self.error_list_F[0])
+                #优先寻找第一个位置有位置的
+                if _pile.charge_mode == charge_mode.F and len(_pile.waiting_list)==0:
+                    _pile.append_waiting_list(self.F_list[0])
+                    flag=True
                     break
+            if not flag:
+                for _pile in self.pile_pool:
+                    if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available():
+                        _pile.append_waiting_list(self.error_list_F[0])
+                        break
             self.error_list_F.remove(self.error_list_F[0])  # 在error_F中删除
         elif (self.F_list != []):
             self.waiting_area.remove(self.F_list[0])  # 在等候区删除
             self.F_list[0].order_state == order_s.wait_queue
             # 添加到充电桩的waiting_list中
             for _pile in self.pile_pool:
-                if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available():
+                #优先寻找第一个位置有位置的
+                if _pile.charge_mode == charge_mode.F and len(_pile.waiting_list)==0:
                     _pile.append_waiting_list(self.F_list[0])
-                    break;
+                    flag=True
+                    break
+            if not flag:
+                for _pile in self.pile_pool:
+                    if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available():
+                        _pile.append_waiting_list(self.F_list[0])
+                        break;
             self.F_list.remove(self.F_list[0])  # 在T_list中删除
             for i in self.F_list:  # 更新其他所有T_list中的id
                 i.update_num()
@@ -476,6 +540,7 @@ class pile_manager(threading.Thread):
 
 
         if self.strategy=="a":   #调度策略 优先级调度
+            #print("优先级调度")
             T,F=self.get_broke_list()
             if(T or F):
                 self.append_broke_list()
@@ -685,14 +750,18 @@ class pile():
         #然后进入统计
         self.total_charge_num+=1
 
-        #最后清除这一单
-        self.waiting_list.remove(self.waiting_list[0])
-        print("over")
+
+
+        #发送结束订单
         finishOrder(self.waiting_list[0].car_id,
                     self.waiting_list[0].service_cost,
                     self.waiting_list[0].total_cost,
-                    self.waiting_list[0].charge_cost,
+                    self.waiting_list[0].electric_cost,
                     self.waiting_list[0].charge_time)
+        #最后清除这一单
+        self.waiting_list.remove(self.waiting_list[0])
+        print("over")
+
 
 
 
@@ -774,4 +843,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_mofity_fee(a)
+    test.test_big(a)
