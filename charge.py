@@ -138,7 +138,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def run(self):
         while True:
             self.update()
-            time.sleep(1)
+            time.sleep(0.5)
             self.timer+=1
 
     '''
@@ -163,7 +163,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
 
     #设置充电桩故障/非故障
     def set_pile_error(self,id):
-        print("set broke")
+        print(f"set broke id={id}")
         for i in self.pile_pool:
             if i.pile_id == id:
                 i.set_error()
@@ -681,11 +681,15 @@ class pile():
         self.high_price = 1.0
 
     def set_error(self):
-        self.working_state=charging_pile_state.broke  #设置为损坏状态
+        print(f"pile id={self.pile_id}is set broke")
+
         for i in self.waiting_list:
             self.broke_list.append(i)  #把目前waiting_list中的全都复制到broke_list中
         if len(self.waiting_list) > 0:
             self.over()  # 结束当前订单
+        if len(self.waiting_list) > 0:  #如果还有别的
+            pass
+        self.working_state = charging_pile_state.broke  # 设置为损坏状态
     def set_not_error(self):
         self.working_state=charging_pile_state.idle
     #返回所有状态
@@ -847,4 +851,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_last_year(a)
+    test.test_big(a)
