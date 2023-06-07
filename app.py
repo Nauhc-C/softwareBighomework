@@ -89,7 +89,10 @@ class OrderManager:
             dic["bill_id"] = i[2]
             dic["pile_id"] = i[3]
             dic["start_time"] = i[4].strftime("%Y-%m-%d %H:%M:%S")
-            dic["end_time"] = i[5].strftime("%Y-%m-%d %H:%M:%S")
+            if (i[5]) == None:
+                dic["end_time"] = None
+            else:
+                dic["end_time"] = i[5].strftime("%Y-%m-%d %H:%M:%S")
             dic["total_fee"] = i[6]
             dic["pay_state"] = i[7]
             list.append(dic)
@@ -221,13 +224,12 @@ class UserManager:
             dict["car_capacity"] = value[3]
             dict["request_amount"] = info["request_amount"]
             dict["pile_id"] = info["pile_id"]
-            end_time = myTime.getDataTime().strftime("%Y-%m-%d %H:%M:%S")
+            end_time = myTime.getDataTime()
             ini_time = time_table[value[2]]
             if info["car_state"] == "正在充电":
                 dict["wait_time"] = None
             else:
-                end_time = _datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
-                start_time = _datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+
                 dict["wait_time"] = str(_datetime.timedelta(seconds=(end_time - ini_time).total_seconds()))
             dict["car_state"] = info["car_state"]
             dict["request_mode"] = info["request_mode"]
@@ -367,6 +369,11 @@ async def getOnlyBill():
             "message": "useless billid."
         })
     i = i[1]
+    ab = None
+    if i[5] == None:
+        ab = None
+    else:
+        ab = i[5].strftime("%Y-%m-%d %H:%M:%S")
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -376,7 +383,7 @@ async def getOnlyBill():
             "bill_id": i[2],
             "pile_id": i[3],
             "start_time": i[4].strftime("%Y-%m-%d %H:%M:%S"),
-            "end_time": i[5].strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": ab,
             "total_fee": i[6],
             "pay_state": i[7],
             "charge_amount": i[8],
@@ -914,7 +921,6 @@ async def geTime():
 
 
 with app.app_context():
-    db.drop_all()
     db.create_all()
     m = hashlib.md5()
     count = db.session.query(User).filter_by(user_name="admin").count()
