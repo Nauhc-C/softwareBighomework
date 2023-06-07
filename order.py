@@ -76,5 +76,5 @@ class order():
             "total_cost": self.service_cost+self.electric_cost,  # 总费用
             "service": self.service_cost,  # 服务费
             "electric": self.electric_cost,  # 电费
-            "time": self.charge_time / 3600  # 充电时间(小时
+            "time": self.charge_time  # 充电时间(小时
         }

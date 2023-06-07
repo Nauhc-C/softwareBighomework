@@ -85,11 +85,11 @@ class OrderManager:
         for i in info:
             dic = {}
             dic["car_id"] = i[0]
-            dic["bill_date"] = i[1]
+            dic["bill_date"] = i[1].strftime("%Y-%m-%d")
             dic["bill_id"] = i[2]
             dic["pile_id"] = i[3]
-            dic["start_time"] = i[4]
-            dic["end_time"] = i[5]
+            dic["start_time"] = i[4].strftime("%Y-%m-%d %H:%M:%S")
+            dic["end_time"] = i[5].strftime("%Y-%m-%d %H:%M:%S")
             dic["total_fee"] = i[6]
             dic["pay_state"] = i[7]
             list.append(dic)
@@ -221,9 +221,14 @@ class UserManager:
             dict["car_capacity"] = value[3]
             dict["request_amount"] = info["request_amount"]
             dict["pile_id"] = info["pile_id"]
-            end_time = myTime.getDataTime()
+            end_time = myTime.getDataTime().strftime("%Y-%m-%d %H:%M:%S")
             ini_time = time_table[value[2]]
-            dict["wait_time"] = (end_time - ini_time).total_seconds()
+            if info["car_state"] == "正在充电":
+                dict["wait_time"] = None
+            else:
+                end_time = _datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+                start_time = _datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+                dict["wait_time"] = str(_datetime.timedelta(seconds=(end_time - ini_time).total_seconds()))
             dict["car_state"] = info["car_state"]
             dict["request_mode"] = info["request_mode"]
             list.append(dict)
@@ -249,12 +254,12 @@ class UserManager:
         info2 = pileManager.view_billing(car_id)
         data = {
             "car_id": car_id,
-            "bill_date": info[1],
+            "bill_date": info[1].strftime("%Y-%m-%d"),
             "bill_id": findBillId(car_id),
             "pile_id": info2["pip_id"],
             "charge_amount": info[4],
-            "charge_duration": info2["time"],
-            "start_time": info[3],
+            "charge_duration": str(_datetime.timedelta(seconds = info2["time"])),
+            "start_time": info[3].strftime("%Y-%m-%d %H:%M:%S"),
             "end_time": None,
             "total_charge_fee": info2["electric"],
             "total_service_fee": info2["service"],
@@ -367,11 +372,11 @@ async def getOnlyBill():
         "message": "success.",
         "data": {
             "car_id": i[0],
-            "bill_date": i[1],
+            "bill_date": i[1].strftime("%Y-%m-%d"),
             "bill_id": i[2],
             "pile_id": i[3],
-            "start_time": i[4],
-            "end_time": i[5],
+            "start_time": i[4].strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": i[5].strftime("%Y-%m-%d %H:%M:%S"),
             "total_fee": i[6],
             "pay_state": i[7],
             "charge_amount": i[8],
@@ -506,7 +511,7 @@ async def requestCharge():
             "car_position": info[1],
             "car_state": "等待区",
             "queue_num": str(info[1]),
-            "request_time": myTime.getDataTime()
+            "request_time": myTime.getDataTime().strftime("%Y-%m-%d %H:%M:%S")
         }
     })
 
@@ -869,15 +874,15 @@ async def look_report():
         })
     pile_id = request.form["pile_id"]
     pile_id = int(pile_id)
-    start = request.form["start_date"]
-    end = request.form["end_date"]
-    if (start == "null" or end == "null"):
+    start2 = request.form["start_date"]
+    end2 = request.form["end_date"]
+    if (start2 == "null" or end2 == "null"):
         return jsonify({
             "code": 1,
             "message": "没有日期."
         })
-    start1 = _datetime.datetime.strptime(start, "%Y-%m-%d")
-    end1 = _datetime.datetime.strptime(end, "%Y-%m-%d")
+    start1 = _datetime.datetime.strptime(start2, "%Y-%m-%d")
+    end1 = _datetime.datetime.strptime(end2, "%Y-%m-%d")
 
 
     start = (start1 - myTime.getInitData()).total_seconds()
@@ -889,8 +894,8 @@ async def look_report():
     start = int(start)
     end = int(end)
     info = pileManager.queryReport(pile_id, start, end)
-    info["start_date"] = start1
-    info["end_date"] = end1
+    info["start_date"] = start2
+    info["end_date"] = end2
     return jsonify({
         "code": 1,
         "message": "bullet shit is here hhhh.",
@@ -903,7 +908,7 @@ async def geTime():
     return jsonify({
         "code": 1,
         "data": {
-            "time": myTime.getDataTime()
+            "time": myTime.getDataTime().strftime("%Y-%m-%d %H:%M:%S")
         }
     })
 

@@ -256,7 +256,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
                 "car_position": _state,
                 "car_state": _state,
                 "queue_num": _order.get_queue_num(),
-                "request_time": time_table[car_id],
+                "request_time": time_table[car_id].strftime("%Y-%m-%d %H:%M:%S"),
                 "pile_id": None,
                 "request_mode": "T",
                 "request_amount": _order.request_amount
@@ -266,7 +266,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
                 "car_position": _state,
                 "car_state": _state,
                 "queue_num": _order.get_queue_num(),
-                "request_time": time_table[car_id],
+                "request_time": time_table[car_id].strftime("%Y-%m-%d %H:%M:%S"),
                 "pile_id": None,
                 "request_mode": "F",
                 "request_amount": _order.request_amount
@@ -276,7 +276,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
                 "car_position": _state,
                 "car_state": _state,
                 "queue_num": None,
-                "request_time": time_table[car_id],
+                "request_time": time_table[car_id].strftime("%Y-%m-%d %H:%M:%S"),
                 "pile_id": x,
                 "request_mode": _mode,
                 "request_amount": _order.request_amount
