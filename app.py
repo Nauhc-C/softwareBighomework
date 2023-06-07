@@ -220,7 +220,7 @@ class UserManager:
                 continue
             info = pileManager.look_query(value[2])
             dict = {}
-            dict["user_id"] = str(value[0])
+            dict["user_id"] = value[2]
             dict["car_capacity"] = value[3]
             dict["request_amount"] = info["request_amount"]
             dict["pile_id"] = info["pile_id"]
@@ -372,8 +372,13 @@ async def getOnlyBill():
     ab = None
     if i[5] == None:
         ab = None
+
     else:
         ab = i[5].strftime("%Y-%m-%d %H:%M:%S")
+
+    aaa = None
+    if i[9] != None:
+        aaa = str(_datetime.timedelta(seconds = int(i[9])))
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -387,7 +392,7 @@ async def getOnlyBill():
             "total_fee": i[6],
             "pay_state": i[7],
             "charge_amount": i[8],
-            "charge_duration": i[9],
+            "charge_duration": aaa,
             "total_charge_fee": i[10],
             "total_service_fee": i[11],
         }
@@ -858,6 +863,8 @@ async def lookQueryPile():
     pile_id = request.form["pile_id"]
     pile_id = int(pile_id)
     info = pileManager.check_pile_report()[pile_id]
+    info["total_charge_time"] = str(_datetime.timedelta(seconds=info["total_charge_time"]))
+
     return jsonify({
         "code": 1,
         "message": "success.",
@@ -903,6 +910,7 @@ async def look_report():
     info = pileManager.queryReport(pile_id, start, end)
     info["start_date"] = start2
     info["end_date"] = end2
+    info["total_charge_time"] = str(_datetime.timedelta(seconds = info["total_charge_time"]))
     return jsonify({
         "code": 1,
         "message": "bullet shit is here hhhh.",
