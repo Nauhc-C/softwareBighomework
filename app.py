@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 import _datetime
 from charge import pile_manager, findBillId, myTime, MyTime, time_table
 from flask_cors import CORS
-
+import json
 from pydantic import BaseModel
 
 app = Flask(__name__)
@@ -285,7 +285,8 @@ def handle_preflight(path):
 
 # 此方法处理用户注册
 @app.route('/user/register', methods=['POST'])
-def register():
+async def register():
+    request.form = json.loads(request.get_data())
     usernamePost = request.form['user_name']
     passwordPost = request.form['password']
     car_id = request.form['car_id']
@@ -312,7 +313,8 @@ def register():
 
 
 @app.route("/user/getTotalBill", methods=["POST"])
-def getTotalBill():
+async def getTotalBill():
+    request.form = json.loads(request.get_data())
     car_id = request.form["car_id"]
     bill_data = request.form["bill_date"]
     token = request.headers.get("Authorization")
@@ -344,7 +346,8 @@ def getTotalBill():
 
 @app.route("/user/getDetailBill", methods=["POST"])
 # 乌鱼子 为什么要有这个函数，合并到上一个不行吗
-def getOnlyBill():
+async def getOnlyBill():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -381,7 +384,8 @@ def getOnlyBill():
 
 # 此方法处理用户登录
 @app.route('/user/login', methods=['POST'])
-def log():
+async def log():
+    request.form = json.loads(request.get_data())
     usernamePost = request.form['user_name']
     passwordPost = request.form['password']
     userCheckCount = userManager.login(usernamePost, passwordPost)
@@ -405,7 +409,7 @@ def log():
 
 
 @app.route("/user/logout", methods=["POST"])
-def logout():
+async def logout():
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -420,7 +424,8 @@ def logout():
 
 
 @app.route("/user/getPayBill", methods=["POST"])
-def pay():
+async def pay():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -442,7 +447,8 @@ def pay():
 
 
 @app.route("/user/changeCapacity", methods=["POST"])
-def changeCapacity():
+async def changeCapacity():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -468,7 +474,8 @@ def changeCapacity():
 
 
 @app.route("/user/chargingRequest", methods=['POST'])
-def requestCharge():
+async def requestCharge():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
 
     if not userManager.checkToken(token):
@@ -504,7 +511,8 @@ def requestCharge():
     })
 
 @app.route("/user/getChargingState", methods=["POST"])
-def lookCharge():
+async def lookCharge():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -525,7 +533,8 @@ def lookCharge():
     })
 
 @app.route("/user/changeChargingAmount", methods=['POST'])
-def changeAmount():
+async def changeAmount():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -547,7 +556,8 @@ def changeAmount():
 
 
 @app.route("/user/changeChargingMode", methods=['POST'])
-def changeMode():
+async def changeMode():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -568,7 +578,8 @@ def changeMode():
 
 
 @app.route("/user/getChargingState", methods=["POST"])
-def getState():
+async def getState():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -590,7 +601,8 @@ def getState():
     })
 
 @app.route("/user/endCharging", methods=["POST"])
-def endCharge():
+async def endCharge():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -605,7 +617,8 @@ def endCharge():
     })
 
 @app.route("/user/queryCarState", methods=["POST"])
-def lookQuery():
+async def lookQuery():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -652,7 +665,8 @@ def lookQuery():
     })
 
 @app.route("/user/beginCharging", methods=["POST"])
-def beginCharge():
+async def beginCharge():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -671,7 +685,8 @@ def beginCharge():
             "message": "无法."
         })
 @app.route("/admin/login", methods=["POST"])
-def adminLog():
+async def adminLog():
+    request.form = json.loads(request.get_data())
     password = request.form["password"]
     info = userManager.login("admin", password)
     if info[0] > 0:
@@ -689,7 +704,7 @@ def adminLog():
 
 
 @app.route("/admin/logout", methods=["POST"])
-def adminLogout():
+async def adminLogout():
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -704,7 +719,8 @@ def adminLogout():
 
 
 @app.route("/admin/powerOn", methods=["POST"])
-def powerOn():
+async def powerOn():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -721,7 +737,8 @@ def powerOn():
 
 
 @app.route("/admin/powerOff", methods=["POST"])
-def powerOff():
+async def powerOff():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -738,7 +755,7 @@ def powerOff():
 
 
 @app.route("/admin/queryPileAmount", methods=["POST"])
-def lookPileAmount():
+async def lookPileAmount():
     token = request.headers.get("Authorization")
     amount = pileManager.retPipeAmount()
     if not userManager.checkToken(token):
@@ -762,7 +779,8 @@ def lookPileAmount():
 
 
 @app.route("/admin/setPrice", methods=["POST"])
-def setPrice():
+async def setPrice():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -782,7 +800,8 @@ def setPrice():
     })
 
 @app.route("/admin/powerCrash", methods=["POST"])
-def setCrash():
+async def setCrash():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -798,7 +817,7 @@ def setCrash():
     })
 
 @app.route("/admin/queryQueueState", methods=["POST"])
-def lookQueueC():
+async def lookQueueC():
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -816,7 +835,8 @@ def lookQueueC():
     })
 
 @app.route("/admin/queryPileState", methods=["POST"])
-def lookQueryPile():
+async def lookQueryPile():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -839,7 +859,8 @@ def lookQueryPile():
     })
 
 @app.route("/admin/queryReport", methods=["POST"])
-def look_report():
+async def look_report():
+    request.form = json.loads(request.get_data())
     token = request.headers.get("Authorization")
     if not userManager.checkToken(token):
         return jsonify({
@@ -878,7 +899,7 @@ def look_report():
     })
 
 @app.route("/getTime", methods=["POST"])
-def geTime():
+async def geTime():
     return jsonify({
         "code": 1,
         "data": {
@@ -888,11 +909,12 @@ def geTime():
 
 
 with app.app_context():
+    db.drop_all()
     db.create_all()
     m = hashlib.md5()
     count = db.session.query(User).filter_by(user_name="admin").count()
     if count == 0:
-        m.update("zxc123456".encode(encoding="utf-8"))
+        m.update("fuckingsoftteamwork".encode(encoding="utf-8"))
         db.session.add(User("admin", m.hexdigest(), None, None))
         db.session.commit()
     pileManager.start()
