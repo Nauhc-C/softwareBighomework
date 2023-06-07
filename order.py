@@ -36,9 +36,11 @@ class order():
         self.electric_cost=0
         self.charge_time=0
         self.wait_time=0
+        self.start_num=0
 
     def init_num(self,id):
         self.order_num=id
+        self.start_num=id
     def update_num(self):
         self.order_num-=1
 
@@ -60,11 +62,13 @@ class order():
             return f"F{self.order_num}"
     #设置订单状态是waiting_queue, 目前只应该在调度进充电区的时候调用(写了)
     def set_state_wait_queue(self):
+        self.order_num=1
         self.order_state=order_s.wait_queue
     #设置订单状态为可以充电,应该在
     #上一个订单结束
     #调度进充电区(写了)     的时候被调用
     def set_state_able_to_charge(self):
+        self.order_num=0
         self.order_state = order_s.able_to_charge
     #设置.......为正在充电
     #在开始充电时调用
