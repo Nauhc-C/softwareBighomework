@@ -253,9 +253,9 @@ class pile_manager(threading.Thread,pile_utils.utils):
             _mode="F"
         if x in ["T"]: #处于等候区的状态
             return {
-                "car_position": _state,
+                "car_position": _order.order_num,
                 "car_state": _state,
-                "queue_num": _order.get_queue_num(),
+                "queue_num": _order.start_num,
                 "request_time": time_table[car_id].strftime("%Y-%m-%d %H:%M:%S"),
                 "pile_id": None,
                 "request_mode": "T",
@@ -263,9 +263,9 @@ class pile_manager(threading.Thread,pile_utils.utils):
             }
         elif x == "F":
             return {
-                "car_position": _state,
+                "car_position": _order.order_num,
                 "car_state": _state,
-                "queue_num": _order.get_queue_num(),
+                "queue_num": _order.start_num,
                 "request_time": time_table[car_id].strftime("%Y-%m-%d %H:%M:%S"),
                 "pile_id": None,
                 "request_mode": "F",
@@ -273,9 +273,9 @@ class pile_manager(threading.Thread,pile_utils.utils):
             }
         else:
             return {
-                "car_position": _state,
+                "car_position": _order.order_num,
                 "car_state": _state,
-                "queue_num": None,
+                "queue_num": _order.start_num,
                 "request_time": time_table[car_id].strftime("%Y-%m-%d %H:%M:%S"),
                 "pile_id": x,
                 "request_mode": _mode,
