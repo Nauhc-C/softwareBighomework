@@ -784,8 +784,8 @@ async def lookPileAmount():
         "message": "success.",
         "data": {
             "amount": amount[0],
-            "fast_pile_id": dictl[1],
-            "slow_pile_id": dictl[0]
+            "fast_pile_id": dictl[0],
+            "slow_pile_id": dictl[1]
         }
     })
 
