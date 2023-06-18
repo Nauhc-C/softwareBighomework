@@ -36,7 +36,7 @@ class MyTime(threading.Thread):
 
     def __init__(self):
         super().__init__()
-        self.mydate = _datetime.datetime(2023, 6, 5, 7, 50, 00, 00)
+        self.mydate = _datetime.datetime(2023, 6, 5, 5, 40, 00, 00)
         self.initdate = self.mydate
 
     def run(self):
@@ -141,7 +141,7 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def run(self):
         while True:
             self.update()
-            time.sleep(0.05)
+            time.sleep(0.048)
             self.timer+=1
 
     '''
@@ -224,16 +224,18 @@ class pile_manager(threading.Thread,pile_utils.utils):
 
     # 开始充电
     def start_charge(self, car_id):
+        print(f"尝试给{car_id}充电")
         #监测是否在某个_pile队列的最前端
         flag = False
         for _pile in self.pile_pool:
             if (_pile.waiting_list != [] and _pile.waiting_list[0].car_id == car_id):
                 #确实在
                 flag = True
+                print(f"成功给{car_id}充电")
                 _pile.remianing_total = _pile.waiting_list[0].request_amount
                 _pile.waiting_list[0].set_state_on_charge()
                 _pile.working_state = charging_pile_state.in_use
-                creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.pile_id)
+                #creatOrder(car_id,_pile.waiting_list[0].request_amount,_pile.pile_id)
         return flag
     # 轮询查看订单状态
     def look_query(self, car_id):
@@ -507,34 +509,19 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def scheldur_F(self):
    #     print("F类调度")
         flag=False
-        if (self.error_list_F != []):   #调度error_F里的 , 并且不动别处的
-            self.error_list_F[0].order_state == order_s.wait_queue
-            # 添加到充电桩的waiting_list中
-            for _pile in self.pile_pool:
-                #优先寻找第一个位置有位置的
-                if _pile.charge_mode == charge_mode.F and len(_pile.waiting_list)==0 and (_pile.working_state.values()==charging_pile_state.idle or _pile.working_state==charging_pile_state.in_use):
-                    print(f"F类, 第一个有空, 插入了error={self.error_list_F[0]}")
-                    _pile.append_waiting_list(self.error_list_F[0])
-                    flag=True
-                    break
-            if not flag:
-                for _pile in self.pile_pool:
-                    if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available() and (_pile.working_state==charging_pile_state.idle or _pile.working_state==charging_pile_state.in_use):
-                        _pile.append_waiting_list(self.error_list_F[0])
-                        break
-            self.error_list_F.remove(self.error_list_F[0])  # 在error_F中删除
-        elif (self.F_list != []):
+        if (self.F_list != []):
             print(f"F类调度--F_list中需要被调度 {self.F_list[0].car_id}")
-            self.waiting_area.remove(self.F_list[0])  # 在等候区删除
-            self.F_list[0].order_state == order_s.wait_queue
-            # 添加到充电桩的waiting_list中
+            self.waiting_area.remove(self.F_list[0])           # 在等候区删除
+            self.F_list[0].order_state == order_s.wait_queue   # 添加到充电桩的waiting_list中
+
             for _pile in self.pile_pool:
-                #优先寻找第一个位置有位置的
+                # 优先寻找第一个位置有位置的
                 if _pile.charge_mode == charge_mode.F and len(_pile.waiting_list)==0 and (_pile.working_state==charging_pile_state.idle or _pile.working_state==charging_pile_state.in_use):
-                    print(f"F类, 第一个有空, 插入了normal={self.F_list[0]}")
+                    print(f"F类, 第一个有空, 插入了={self.F_list[0].car_id}")
                     _pile.append_waiting_list(self.F_list[0])
                     flag=True
                     break
+            # 第一个没有位置才去第二个
             if not flag:
                 for _pile in self.pile_pool:
                     if _pile.charge_mode == charge_mode.F and _pile.check_waiting_list_available() and (_pile.working_state==charging_pile_state.idle or _pile.working_state==charging_pile_state.in_use):
@@ -548,8 +535,6 @@ class pile_manager(threading.Thread,pile_utils.utils):
     def scheldur(self, _charge_mode):
         #判断是否存在没被收集的broke
         #放置在broke列表里, 然后调度时先去把broke列表里的调度了
-
-
         if self.strategy=="a":   #调度策略 优先级调度
             #print("优先级调度")
             T,F=self.get_broke_list()
@@ -559,17 +544,6 @@ class pile_manager(threading.Thread,pile_utils.utils):
                 self.scheldur_T()
             if (_charge_mode == charge_mode.F):  # 处理T类
                 self.scheldur_F()
-        elif self.strategy=="b":   #调度策略  时间顺序调度
-            T, F = self.get_broke_list()
-            if (T or F):
-                self.requeue_broke()
-            if (_charge_mode == charge_mode.T):  # 处理T类
-                self.scheldur_T()
-            if (_charge_mode == charge_mode.F):  # 处理T类
-                self.scheldur_F()
-        elif self.strategy=="c":   #调度策略    故障回复调度
-            pass
-
 
         '''
         if (_charge_mode == charge_mode.T):  # 处理T类
@@ -600,9 +574,35 @@ class pile_manager(threading.Thread,pile_utils.utils):
                     i.update_num()
         '''
         #self.PRINT()
+    '''
+            return {
+                "total_charge_num":total_charge_num,              #累计充电次数
+                "total_charge_time": total_charge_time ,           #累计充电时长(小时)
+                "total_capacity":  total_capacity ,             #累计充电电量
+                "total_charge_fee":   total_charge_fee   ,        #充电费
+                "total_service_fee":   total_service_fee  ,        #服务费
+                "total_fee":   total_fee   ,               #总费用
+                "start_date":    start  ,              #开始时间
+                "end_date":   end                   #结束时间
+            }
+    '''
+    def return_pile_information(self):
+        data=[]
+        for _pile in self.pile_pool:
+            a=_pile.queryReport(0,self.timer-1)  # 获取详单
+            data.append(a.get('total_charge_num'))
+            data.append(a.get('total_charge_time'))
+            data.append(a.get('total_capacity'))
+            data.append(a.get('total_charge_fee'))
+            data.append(a.get('total_service_fee'))
+            data.append(a.get('total_fee'))
+
+        return data
+
 
     def PRINT(self):
         print("======================")
+        '''
         print(f"current time={self.timer}")
         print("current waiting_area")
         for i in self.waiting_area:
@@ -634,11 +634,14 @@ class pile_manager(threading.Thread,pile_utils.utils):
             print(i.request_mode,end=";")
             print(i.order_num)
         print("====")
+        '''
         print("PRINT_pile")
         for _pile in self.pile_pool:
             print(f"_pile={_pile.pile_id},work_state={_pile.working_state}")
+            #print(_pile.queryReport(0,self.timer-1))
             for i in _pile.waiting_list:
                 print(f"i.car_id={i.car_id}", end=";")
+
 
             print("")
         print("======================")
@@ -751,22 +754,22 @@ class pile():
       #      print(f"pile:{self.pile_id}is use")
             self.total_charge_time+=1
             self.waiting_list[0].charge_time+=1
-            if(self.charge_mode==charge_mode.T):
+            if(self.charge_mode==charge_mode.T):  #T类
                 amount=T_charge_per_second/3600
-                self.remianing_total-=T_charge_per_second/3600
-                self.total_capacity+=T_charge_per_second/3600
-                self.waiting_list[0].electric_cost+=(T_charge_per_second/3600)*self.get_current_price()         #计费
-                charge_cost=(T_charge_per_second/3600)*self.get_current_price()
-                self.waiting_list[0].service_cost+=(T_charge_per_second/3600)*0.8
-                service_cost=(T_charge_per_second/3600)*0.8
-            else:
+                self.remianing_total-=amount
+                self.total_capacity+=amount
+                self.waiting_list[0].electric_cost+=amount*self.get_current_price()         #计费
+                charge_cost=amount*self.get_current_price()
+                self.waiting_list[0].service_cost+=amount*0.8
+                service_cost=amount*0.8
+            else:                                #F类
                 amount = F_charge_per_second / 3600
-                self.remianing_total-=F_charge_per_second/3600
-                self.total_capacity+=F_charge_per_second/3600
-                self.waiting_list[0].electric_cost += (F_charge_per_second / 3600) * self.get_current_price()   #计费
-                charge_cost = (F_charge_per_second / 3600) * self.get_current_price()
-                self.waiting_list[0].service_cost += (F_charge_per_second / 3600) * 0.8
-                charge_cost = (F_charge_per_second / 3600) * self.get_current_price()
+                self.remianing_total-=amount
+                self.total_capacity+=amount
+                self.waiting_list[0].electric_cost += amount * self.get_current_price()   #计费
+                self.waiting_list[0].service_cost += amount * 0.8
+                charge_cost = amount * self.get_current_price()
+                service_cost = amount * 0.8
             #以下是正常的状态的更新
             if(self.remianing_total<=0):
                 self.over()
@@ -790,8 +793,9 @@ class pile():
                     self.waiting_list[0].electric_cost,
                     self.waiting_list[0].charge_time)
         #最后清除这一单
+        print(f"{self.waiting_list[0].car_id} is over")
         self.waiting_list.remove(self.waiting_list[0])
-        print("over")
+
 
 
 
@@ -853,14 +857,16 @@ class pile():
             total_charge_fee+=i[3]
             total_service_fee+=i[4]
             total_fee +=i[5]
+        #print(f"end={end},total_charge_time={total_charge_time}")
+        hours = round((total_charge_time) / 3600, 2)
 
         return {
             "total_charge_num":total_charge_num,              #累计充电次数
-            "total_charge_time": total_charge_time ,           #累计充电时长(小时)
-            "total_capacity":  total_capacity ,             #累计充电电量
-            "total_charge_fee":   total_charge_fee   ,        #充电费
-            "total_service_fee":   total_service_fee  ,        #服务费
-            "total_fee":   total_fee   ,               #总费用
+            "total_charge_time": hours ,           #累计充电时长(小时)
+            "total_capacity":  round(total_capacity,2) ,             #累计充电电量
+            "total_charge_fee":   round(total_charge_fee,2)   ,        #充电费
+            "total_service_fee":   round(total_service_fee,2)  ,        #服务费
+            "total_fee":   round(total_fee,2)   ,               #总费用
             "start_date":    start  ,              #开始时间
             "end_date":   end                   #结束时间
         }
@@ -873,4 +879,4 @@ if __name__ == "__main__":
     #finishOrder("ADX100", 100, 110, 10, 50.1)
     a = pile_manager()
     a.start()
-    test.test_broke_car_start(a)
+    test.test_for_big(a)

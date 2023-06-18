@@ -1,4 +1,8 @@
+import datetime
 import time
+import openpyxl
+from charge import myTime
+
 
 def test_create(a):
     time.sleep(1)
@@ -158,3 +162,144 @@ def test_broke_car_start(a):
     a.set_pile_error(2)
     time.sleep(1)
     print(a.look_query("qww2"))
+
+
+def test_start_after_submit(a,name,amount,type):
+    a.submit_a_charging_request(name,amount,type)
+    time.sleep(3)
+    a.start_charge(name)
+    time.sleep(2)
+
+def get_list(a,now):
+    data=[]
+    data.append(now.strftime('%Y-%m-%d %H:%M:%S'))
+    data.extend(a.return_pile_information())
+    return data
+
+
+def test_for_big(a):
+    # 前期准备工作
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet['A1'] = '时间'
+    worksheet['B1'] = '快充1'
+    worksheet['H1'] = '快充2'
+    worksheet['N1'] = '慢充1'
+    worksheet['T1'] = '慢充2'
+    worksheet['Z1'] = '慢充3'
+    worksheet.merge_cells('A1:A2')
+    worksheet['A1'].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    worksheet.merge_cells('B1:G1')
+    worksheet['B1'].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    worksheet.merge_cells('H1:M1')
+    worksheet['H1'].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    worksheet.merge_cells('N1:S1')
+    worksheet['N1'].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    worksheet.merge_cells('T1:Y1')
+    worksheet['T1'].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    worksheet.merge_cells('Z1:AE1')
+    worksheet['Z1'].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    for i in range(5):
+        start_col = i * 6 + 2
+        end_col = (i + 1) * 6 + 1
+        worksheet.cell(row=2, column=start_col, value='累计充电次数')
+        worksheet.cell(row=2, column=start_col + 1, value='累计充电时长')
+        worksheet.cell(row=2, column=start_col + 2, value='累计充电量')
+        worksheet.cell(row=2, column=start_col + 3, value='累计充电费用')
+        worksheet.cell(row=2, column=start_col + 4, value='累计服务费用')
+        worksheet.cell(row=2, column=end_col, value='累计总费用')
+    for cell in ['B2', 'C2']:
+        worksheet[cell].alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+    for column_cells in worksheet.columns:
+        if column_cells[0].value is None:
+            continue
+
+        length = max(len(str(cell.value)) for cell in column_cells)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = length + 1 if length > 10 else 10
+
+
+
+
+
+
+
+
+    while True:
+
+        now = myTime.getDataTime()
+        #print(now)
+        if(now.hour == 5 and now.minute == 43 and now.second==0):
+            test_start_after_submit(a,"V1",7,"T")
+            test_start_after_submit(a,"V2", 30, "F")  #提前提交
+
+
+        if(now.hour == 6 and now.minute == 0 and now.second==0):
+            print("当前是6点")
+            worksheet.append(get_list(a, now))
+
+        if(now.hour == 6 and now.minute == 25 and now.second==0):
+            print("当前是6点25")
+            test_start_after_submit(a,"V3", 28, "T")
+            test_start_after_submit(a,"V4", 120, "F")
+
+
+        if(now.hour == 6 and now.minute == 30 and now.second==0):
+            print("当前是6点30")
+            worksheet.append(get_list(a, now))
+
+            a.PRINT()
+        if(now.hour == 7 and now.minute == 0 and now.second==0):
+            print("当前是7点")
+            worksheet.append(get_list(a, now))
+            test_start_after_submit(a,"V5", 24.5, "T")
+            test_start_after_submit(a,"V6", 45, "F")
+            a.PRINT()
+
+        if(now.hour == 7 and now.minute == 30 and now.second==0):
+            print("当前是7点30")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+        if(now.hour == 8 and now.minute == 0 and now.second==0):
+            print("当前是8点")
+            worksheet.append(get_list(a, now))
+            test_start_after_submit(a,"V7", 75, "F")
+            a.PRINT()
+        if(now.hour == 8 and now.minute == 30 and now.second==0):
+            print("当前是8点30")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+        if(now.hour == 9 and now.minute == 0 and now.second==0):
+            print("当前是9点")
+            worksheet.append(get_list(a, now))
+            test_start_after_submit(a,"V8", 14, "T")
+            a.start_charge("V7")
+            a.PRINT()
+        if(now.hour == 9 and now.minute == 30 and now.second==0):
+            print("当前是9点30")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+        if(now.hour == 10 and now.minute == 0 and now.second==0):
+            print("当前是10点")
+            worksheet.append(get_list(a, now))
+            a.set_pile_error(4)
+            a.PRINT()
+        if(now.hour == 10 and now.minute == 30 and now.second==0):
+            print("当前是10点30")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+        if(now.hour == 11 and now.minute == 0 and now.second==0):
+            print("当前是11点")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+        if(now.hour == 11 and now.minute == 30 and now.second==0):
+            print("当前是11点30")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+        if(now.hour == 12 and now.minute == 0 and now.second==0):
+            print("当前是12点")
+            worksheet.append(get_list(a, now))
+            a.PRINT()
+            break
+        time.sleep(1)
+
+    workbook.save('output.xlsx')
